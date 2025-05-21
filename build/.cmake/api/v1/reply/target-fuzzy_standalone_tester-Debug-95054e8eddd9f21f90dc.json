@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "Debug/pid_standalone_tester.exe"
+			"path" : "Debug/fuzzy_standalone_tester.exe"
 		},
 		{
-			"path" : "Debug/pid_standalone_tester.pdb"
+			"path" : "Debug/fuzzy_standalone_tester.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -28,13 +28,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 20,
+				"line" : 35,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 25,
+				"line" : 39,
 				"parent" : 0
 			}
 		]
@@ -74,13 +74,13 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "pid_logic_lib::@6890427a1f51a3e7e1df"
+			"id" : "fuzzy_logic_lib::@6890427a1f51a3e7e1df"
 		},
 		{
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
 		}
 	],
-	"id" : "pid_standalone_tester::@6890427a1f51a3e7e1df",
+	"id" : "fuzzy_standalone_tester::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -95,7 +95,7 @@
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "Debug\\pid_logic_lib.lib",
+				"fragment" : "Debug\\fuzzy_logic_lib.lib",
 				"role" : "libraries"
 			},
 			{
@@ -105,8 +105,8 @@
 		],
 		"language" : "CXX"
 	},
-	"name" : "pid_standalone_tester",
-	"nameOnDisk" : "pid_standalone_tester.exe",
+	"name" : "fuzzy_standalone_tester",
+	"nameOnDisk" : "fuzzy_standalone_tester.exe",
 	"paths" : 
 	{
 		"build" : ".",
@@ -127,7 +127,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/agent_control_main.cpp",
+			"path" : "src/fuzzy_test_main.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

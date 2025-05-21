@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "Debug/pid_logic_lib.lib"
+			"path" : "Release/pid_logic_lib.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -35,13 +35,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 11,
+				"line" : 9,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 14,
+				"line" : 12,
 				"parent" : 0
 			}
 		]
@@ -52,7 +52,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd"
+					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /O2 /Ob2 /DNDEBUG -std:c++17 -MD"
 				}
 			],
 			"includes" : 

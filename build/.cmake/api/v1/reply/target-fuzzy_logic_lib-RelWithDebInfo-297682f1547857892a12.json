@@ -12,7 +12,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "MinSizeRel/pid_logic_lib.lib"
+			"path" : "RelWithDebInfo/fuzzy_logic_lib.lib"
 		}
 	],
 	"backtrace" : 1,
@@ -35,13 +35,13 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 11,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 14,
+				"line" : 21,
 				"parent" : 0
 			}
 		]
@@ -52,7 +52,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /O1 /Ob1 /DNDEBUG -std:c++17 -MD"
+					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /O2 /Ob1 /DNDEBUG -std:c++17 -MD"
 				}
 			],
 			"includes" : 
@@ -83,9 +83,9 @@
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
 		}
 	],
-	"id" : "pid_logic_lib::@6890427a1f51a3e7e1df",
-	"name" : "pid_logic_lib",
-	"nameOnDisk" : "pid_logic_lib.lib",
+	"id" : "fuzzy_logic_lib::@6890427a1f51a3e7e1df",
+	"name" : "fuzzy_logic_lib",
+	"nameOnDisk" : "fuzzy_logic_lib.lib",
 	"paths" : 
 	{
 		"build" : ".",
@@ -106,7 +106,7 @@
 		{
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
-			"path" : "src/pid_controller.cpp",
+			"path" : "src/gt2_fuzzy_logic_system.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],
