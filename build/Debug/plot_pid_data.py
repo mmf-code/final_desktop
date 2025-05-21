@@ -6,7 +6,7 @@ import numpy as np
 
 # --- Configuration ---
 # Use the new CSV file name from the C++ FLS code
-csv_file_name = "multi_drone_sim_data.csv"
+csv_file_name = "multi_drone_pid_fls_sim_data.csv"
 script_dir = os.path.dirname(os.path.abspath(__file__))
 NUM_DRONES = 3 # Should match the simulation
 colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown'] # Colors for plotting

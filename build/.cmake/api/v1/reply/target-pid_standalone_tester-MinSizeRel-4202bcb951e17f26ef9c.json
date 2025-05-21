@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "Debug/pid_standalone_tester.exe"
+			"path" : "MinSizeRel/pid_standalone_tester.exe"
 		},
 		{
-			"path" : "Debug/pid_standalone_tester.pdb"
+			"path" : "MinSizeRel/pid_standalone_tester.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -45,7 +45,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -std:c++17 -MDd"
+					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /O1 /Ob1 /DNDEBUG -std:c++17 -MD"
 				}
 			],
 			"includes" : 
@@ -74,11 +74,11 @@
 	[
 		{
 			"backtrace" : 2,
-			"id" : "pid_logic_lib::@6890427a1f51a3e7e1df"
+			"id" : "fuzzy_logic_lib::@6890427a1f51a3e7e1df"
 		},
 		{
 			"backtrace" : 2,
-			"id" : "fuzzy_logic_lib::@6890427a1f51a3e7e1df"
+			"id" : "pid_logic_lib::@6890427a1f51a3e7e1df"
 		},
 		{
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
@@ -90,21 +90,21 @@
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /Ob0 /Od /RTC1 -MDd",
+				"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /O1 /Ob1 /DNDEBUG -MD",
 				"role" : "flags"
 			},
 			{
-				"fragment" : "/machine:x64 /debug /INCREMENTAL /subsystem:console",
+				"fragment" : "/machine:x64 /INCREMENTAL:NO /subsystem:console",
 				"role" : "flags"
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "Debug\\pid_logic_lib.lib",
+				"fragment" : "MinSizeRel\\pid_logic_lib.lib",
 				"role" : "libraries"
 			},
 			{
 				"backtrace" : 2,
-				"fragment" : "Debug\\fuzzy_logic_lib.lib",
+				"fragment" : "MinSizeRel\\fuzzy_logic_lib.lib",
 				"role" : "libraries"
 			},
 			{

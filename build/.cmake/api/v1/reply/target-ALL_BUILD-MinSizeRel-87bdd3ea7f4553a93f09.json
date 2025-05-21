@@ -17,9 +17,6 @@
 	"dependencies" : 
 	[
 		{
-			"id" : "pid_logic_lib::@6890427a1f51a3e7e1df"
-		},
-		{
 			"id" : "fuzzy_logic_lib::@6890427a1f51a3e7e1df"
 		},
 		{
@@ -27,6 +24,9 @@
 		},
 		{
 			"id" : "fuzzy_standalone_tester::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "pid_logic_lib::@6890427a1f51a3e7e1df"
 		},
 		{
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
