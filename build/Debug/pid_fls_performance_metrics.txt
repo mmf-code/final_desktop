@@ -1,0 +1,54 @@
+PID+FLS Performance Metrics (Kp=1.500, Ki=0.050, Kd=1.200)
+=======================================================================
+
+--- METRICS FOR PHASE 1 ---
+
+  --- Drone 0 (Phase 1) ---
+    X-Axis (Target: 5.000 from -2.000):
+      Peak: 5.900 at T=4.250s, Overshoot: 12.861%
+      Settling Time (2%): Not Settled
+    Y-Axis (Target: 7.309 from 0.000):
+      Peak: 8.263 at T=4.450s, Overshoot: 13.049%
+      Settling Time (2%): Not Settled
+
+  --- Drone 1 (Phase 1) ---
+    X-Axis (Target: 3.000 from 0.000):
+      Peak: 3.255 at T=5.000s, Overshoot: 8.513%
+      Settling Time (2%): Not Settled
+    Y-Axis (Target: 3.845 from 0.000):
+      Peak: 4.296 at T=3.900s, Overshoot: 11.721%
+      Settling Time (2%): Not Settled
+
+  --- Drone 2 (Phase 1) ---
+    X-Axis (Target: 7.000 from 2.000):
+      Peak: 7.638 at T=3.850s, Overshoot: 12.760%
+      Settling Time (2%): 7.200000s
+    Y-Axis (Target: 3.845 from 0.000):
+      Peak: 4.296 at T=3.900s, Overshoot: 11.721%
+      Settling Time (2%): Not Settled
+
+--- METRICS FOR PHASE 2 ---
+
+  --- Drone 0 (Phase 2) ---
+    X-Axis (Target: -5.000 from 5.134):
+      Peak: -6.143 at T=19.250s, Overshoot: 11.280%
+      Settling Time (2%): 28.150000s
+    Y-Axis (Target: 2.309 from 7.478):
+      Peak: 1.829 at T=18.550s, Overshoot: 9.300%
+      Settling Time (2%): 30.700000s
+
+  --- Drone 1 (Phase 2) ---
+    X-Axis (Target: -7.000 from 3.092):
+      Peak: -8.196 at T=19.250s, Overshoot: 11.855%
+      Settling Time (2%): 28.100000s
+    Y-Axis (Target: -1.155 from 3.955):
+      Peak: -1.685 at T=18.600s, Overshoot: 10.383%
+      Settling Time (2%): 50.850000s
+
+  --- Drone 2 (Phase 2) ---
+    X-Axis (Target: -3.000 from 7.103):
+      Peak: -4.183 at T=19.250s, Overshoot: 11.711%
+      Settling Time (2%): 37.050000s
+    Y-Axis (Target: -1.155 from 3.955):
+      Peak: -1.685 at T=18.600s, Overshoot: 10.383%
+      Settling Time (2%): 50.850000s

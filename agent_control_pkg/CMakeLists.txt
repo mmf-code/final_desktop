@@ -24,11 +24,14 @@ target_include_directories(fuzzy_logic_lib PUBLIC
 )
 
 
-# --- Executable for PID standalone test ---
+# --- Executable for PID standalone test (NOW USES FLS) ---
 add_executable(pid_standalone_tester
-    src/agent_control_main.cpp 
+    src/agent_control_main.cpp
 )
-target_link_libraries(pid_standalone_tester PRIVATE pid_logic_lib)
+target_link_libraries(pid_standalone_tester PRIVATE
+    pid_logic_lib       # Keep this
+    fuzzy_logic_lib     # ***** ADD THIS LINE *****
+)
 
 
 # --- Executable for Fuzzy Logic standalone test ---
