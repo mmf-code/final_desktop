@@ -1,0 +1,10 @@
+^C:\USERS\ATAKA\ONEDRIVE\MASAÜSTÜ\DOCS\FINAL\BUILD\CMAKEFILES\91FA720E13F6CAB793E8F52BDE393BBF\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/ataka/OneDrive/Masaüstü/docs/final/agent_control_pkg -BC:/Users/ataka/OneDrive/Masaüstü/docs/final/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/agent_control_standalone_test.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

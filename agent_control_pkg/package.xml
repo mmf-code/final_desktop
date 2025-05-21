@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>agent_control_pkg</name>
+  <version>0.0.0</version>
+  <description>Package for individual agent control including PID and Fuzzy Logic.</description>
+  <maintainer email="ataka@example.com">Atakan YAMAN</maintainer>
+  <license>Apache License 2.0</license> <!-- Or your chosen license -->
+
+  <!-- These will be important for ROS2 build -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Add dependencies needed when compiling (e.g. rclcpp for ROS2 nodes) -->
+  <!-- <depend>rclcpp</depend> -->
+  <!-- <depend>std_msgs</depend> -->
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
