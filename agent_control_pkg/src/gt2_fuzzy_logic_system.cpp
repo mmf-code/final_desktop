@@ -156,107 +156,84 @@ GT2FuzzyLogicSystem::evaluateRulesAndAggregate(
 {
     std::cout << "GT2FLS: Evaluating " << rules_.size() << " Rules & Aggregating..." << std::endl;
 
-    double weighted_sum_output_lower = 0.0;
-    double weighted_sum_output_upper = 0.0;
-    double sum_of_firing_strengths_lower = 0.0;
-    double sum_of_firing_strengths_upper = 0.0;
+    if (rules_.empty()) {
+        std::cerr << "Warning: No rules defined in FLS!" << std::endl;
+        return {0.0, 0.0}; // Return a zero interval if no rules
+    }
 
+    double overall_max_lower_firing_strength = 0.0;
+    double overall_max_upper_firing_strength = 0.0;
     bool any_rule_fired = false;
 
-    for (const auto& rule : rules_) {
-        // --- 1. Antecedent Evaluation (Calculate Firing Strength Interval [w_low, w_up] for the rule) ---
-        MembershipInterval rule_firing_strength = {1.0, 1.0}; // Start with full strength
+    for (size_t rule_idx = 0; rule_idx < rules_.size(); ++rule_idx) {
+        const FuzzyRule& rule = rules_[rule_idx];
+        
+        double current_rule_lower_firing_strength = 1.0; // Start with max for min operation
+        double current_rule_upper_firing_strength = 1.0; // Start with max for min operation
+        bool can_evaluate_rule = true;
 
+        // 1. Antecedent Evaluation (t-norm: min)
+        // std::cout << "  Evaluating Rule " << rule_idx + 1 << ":" << std::endl;
         for (const auto& antecedent_pair : rule.antecedents) {
-            const std::string& input_var_name = antecedent_pair.first;
+            // antecedent_pair is like {"error", "ZE"}
+            const std::string& input_variable_name = antecedent_pair.first;
             const std::string& fuzzy_set_name = antecedent_pair.second;
 
-            if (fuzzified_inputs.count(input_var_name) && 
-                fuzzified_inputs.at(input_var_name).count(fuzzy_set_name)) {
-                
-                const MembershipInterval& term_membership = fuzzified_inputs.at(input_var_name).at(fuzzy_set_name);
-                
-                // Apply t-norm (min for Interval Type-2)
-                rule_firing_strength.first  = std::min(rule_firing_strength.first,  term_membership.first);  // Lower bound
-                rule_firing_strength.second = std::min(rule_firing_strength.second, term_membership.second); // Upper bound
+            // Check if fuzzified input for this variable exists
+            if (fuzzified_inputs.count(input_variable_name)) {
+                const auto& var_fuzz_sets = fuzzified_inputs.at(input_variable_name);
+                // Check if the specific fuzzy set for this antecedent exists
+                if (var_fuzz_sets.count(fuzzy_set_name)) {
+                    const MembershipInterval& mi = var_fuzz_sets.at(fuzzy_set_name);
+                    current_rule_lower_firing_strength = std::min(current_rule_lower_firing_strength, mi.first);
+                    current_rule_upper_firing_strength = std::min(current_rule_upper_firing_strength, mi.second);
+                    // std::cout << "    Antecedent: " << input_variable_name << " is " << fuzzy_set_name
+                    //           << " -> mu_interval = [" << mi.first << ", " << mi.second << "]" << std::endl;
+                } else {
+                    std::cerr << "Warning: Rule " << rule_idx + 1 << ": Fuzzy set '" << fuzzy_set_name 
+                              << "' not found for input '" << input_variable_name << "'. Skipping rule part." << std::endl;
+                    can_evaluate_rule = false; // Cannot fully evaluate this rule's antecedents
+                    break; 
+                }
             } else {
-                // If any antecedent term is not found or has no membership, this rule effectively doesn't fire
-                rule_firing_strength = {0.0, 0.0}; 
-                // std::cerr << "Warning: Antecedent term " << input_var_name << "." << fuzzy_set_name 
-                //           << " not found in fuzzified inputs for a rule." << std::endl;
-                break; // Stop processing antecedents for this rule
+                std::cerr << "Warning: Rule " << rule_idx + 1 << ": Input variable '" << input_variable_name 
+                          << "' not found in fuzzified inputs. Skipping rule part." << std::endl;
+                can_evaluate_rule = false;
+                break;
             }
         }
 
-        // std::cout << "  Rule (Antecedents -> " << rule.consequent.first << "." << rule.consequent.second 
-        //           << ") Firing Strength: [" << rule_firing_strength.first << ", " 
-        //           << rule_firing_strength.second << "]" << std::endl;
-
-        if (rule_firing_strength.second > 1e-6) { // If the upper bound of firing strength is greater than (almost) zero
-            any_rule_fired = true;
-            // --- 2. Get Representative Crisp Value for Consequent ---
-            // This is a MAJOR SIMPLIFICATION. Ideally, this involves IT2 set operations.
-            // For now, map consequent set names to crisp values.
-            double consequent_crisp_value = 0.0;
-            const std::string& output_var_name = rule.consequent.first; // Should be "correction"
-            const std::string& output_set_name = rule.consequent.second;
-
-            // You'll need to define these mappings based on your output fuzzy sets
-            // This is a placeholder - you should adjust these values based on your FOU peaks for output sets
-            if (output_set_name == "LNC") consequent_crisp_value = -4.0; // Center of a "Large Negative Correction"
-            else if (output_set_name == "SNC") consequent_crisp_value = -1.5;
-            else if (output_set_name == "NC")  consequent_crisp_value = 0.0;
-            else if (output_set_name == "SPC") consequent_crisp_value = 1.5;
-            else if (output_set_name == "LPC") consequent_crisp_value = 4.0;
-            else {
-                // std::cerr << "Warning: Unknown consequent set name '" << output_set_name << "' in rule." << std::endl;
-            }
-            
-            // std::cout << "    Consequent '" << output_set_name << "' maps to crisp value: " << consequent_crisp_value << std::endl;
-
-            // --- 3. Weighted Sum (Simplified Aggregation/Defuzzification Step) ---
-            // We use the firing strength interval to contribute to two sums
-            weighted_sum_output_lower += rule_firing_strength.first * consequent_crisp_value;
-            weighted_sum_output_upper += rule_firing_strength.second * consequent_crisp_value;
-            
-            sum_of_firing_strengths_lower += rule_firing_strength.first;
-            sum_of_firing_strengths_upper += rule_firing_strength.second;
-        }
-    }
-
-    // --- Calculate Final Output Interval (Simplified) ---
-    MembershipInterval final_aggregated_interval = {0.0, 0.0}; // Default if no rules fired
-
-    if (any_rule_fired) {
-        if (sum_of_firing_strengths_lower > 1e-6) {
-            final_aggregated_interval.first = weighted_sum_output_lower / sum_of_firing_strengths_lower;
-        } else {
-            final_aggregated_interval.first = 0.0; // Avoid division by zero
-        }
-        if (sum_of_firing_strengths_upper > 1e-6) {
-            final_aggregated_interval.second = weighted_sum_output_upper / sum_of_firing_strengths_upper;
-        } else {
-             final_aggregated_interval.second = 0.0; // Avoid division by zero
+        if (!can_evaluate_rule) {
+            current_rule_lower_firing_strength = 0.0; // Rule effectively doesn't fire
+            current_rule_upper_firing_strength = 0.0;
         }
         
-        // Ensure lower <= upper
-        if (final_aggregated_interval.first > final_aggregated_interval.second) {
-            // This can happen if negative consequents are fired with stronger lower bounds than positive ones.
-            // For this simplified method, it might be okay or indicate rule/MF tuning is needed.
-            // Let's just swap them for now to maintain a valid interval.
-            std::swap(final_aggregated_interval.first, final_aggregated_interval.second);
-        }
+        // std::cout << "    Rule " << rule_idx + 1 << " Firing Strength Interval: [" 
+        //           << current_rule_lower_firing_strength << ", " 
+        //           << current_rule_upper_firing_strength << "]" << std::endl;
 
-    } else {
+        // For this simplified aggregation, we take the maximum firing strength found so far
+        // This is a very crude form of aggregation. True aggregation combines implied consequents.
+        if (current_rule_lower_firing_strength > 0 || current_rule_upper_firing_strength > 0) {
+            any_rule_fired = true;
+        }
+        overall_max_lower_firing_strength = std::max(overall_max_lower_firing_strength, current_rule_lower_firing_strength);
+        overall_max_upper_firing_strength = std::max(overall_max_upper_firing_strength, current_rule_upper_firing_strength);
+    } // End of loop through rules
+
+    if (!any_rule_fired) {
         std::cout << "  No rules fired significantly." << std::endl;
     }
-    
-    std::cout << "GT2FLS: Simplified Aggregated Output Interval: [" << final_aggregated_interval.first 
-              << ", " << final_aggregated_interval.second << "]" << std::endl;
 
-    return final_aggregated_interval; // This interval will then go to typeReduce
+    // This returned interval is what our (currently placeholder) type-reducer will get.
+    // It's a very simplified representation of the aggregated output.
+    MembershipInterval simplified_aggregated_output_interval = {overall_max_lower_firing_strength, overall_max_upper_firing_strength};
+    std::cout << "GT2FLS: Simplified Aggregated Output Interval: [" 
+              << simplified_aggregated_output_interval.first << ", " 
+              << simplified_aggregated_output_interval.second << "]" << std::endl;
+              
+    return simplified_aggregated_output_interval;
 }
-
 // --- typeReduce and defuzzify methods (remain the same simple placeholders for now) ---
 std::pair<double, double>
 GT2FuzzyLogicSystem::typeReduce(const MembershipInterval& aggregated_output_interval) {

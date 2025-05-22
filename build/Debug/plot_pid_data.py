@@ -115,10 +115,12 @@ axs1[0, 0].set_xticks(integer_ticks)
 
 # Plot 1.2: Y Positions
 for i in range(NUM_DRONES):
-    if f'TargetY{i}' in df.columns:
-        axs1[0, 1].plot(df['Time'], df[f'TargetY{i}'], label=f'D{i} Target Y', linestyle='--', color=colors[i % len(colors)])
-    if f'CurrentY{i}' in df.columns:
-        axs1[0, 1].plot(df['Time'], df[f'CurrentY{i}'], label=f'D{i} Current Y', color=colors[i % len(colors)])
+    if i == 1: # Drone 1
+        axs1[0, 1].plot(df['Time'], df.get(f'TargetY{i}'), label=f'D{i} Target Y', linestyle=':', color='lime') # Dotted lime
+        axs1[0, 1].plot(df['Time'], df.get(f'CurrentY{i}'), label=f'D{i} Current Y', color='lime', linewidth=2) # Thicker lime
+    else:
+        axs1[0, 1].plot(df['Time'], df.get(f'TargetY{i}'), label=f'D{i} Target Y', linestyle='--', color=colors[i])
+        axs1[0, 1].plot(df['Time'], df.get(f'CurrentY{i}'), label=f'D{i} Current Y', color=colors[i])
 axs1[0, 1].set_xlabel('Time (s)')
 axs1[0, 1].set_ylabel('Y Position')
 axs1[0, 1].set_title('Y Position Control (All Drones)')

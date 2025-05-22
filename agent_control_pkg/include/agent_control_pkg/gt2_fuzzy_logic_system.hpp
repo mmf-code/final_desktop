@@ -33,6 +33,9 @@ public:
         std::pair<std::string, std::string> consequent;   // e.g., {"correction": "NegativeMedium"}
     };
 
+        // Temporarily public for testing fuzzification directly from main
+    std::map<std::string, std::map<std::string, MembershipInterval>> fuzzifyInputs(double crisp_error, double crisp_dError, double crisp_wind);
+
 public:
     GT2FuzzyLogicSystem();
     ~GT2FuzzyLogicSystem();
@@ -58,9 +61,6 @@ private:
     // Helper for triangular MF. Returns [lower_mu, upper_mu]
     MembershipInterval getTriangularMembership(double crisp_input, double l_left, double l_peak, double l_right,
                                                                      double u_left, double u_peak, double u_right);
-    
-    // Placeholder for Fuzzification
-    std::map<std::string, std::map<std::string, MembershipInterval>> fuzzifyInputs(double error, double dError, double wind);
 
     // Placeholder for Rule Evaluation & Aggregation
     // This would return an aggregated IT2FS for the output variable. For simplicity, let's have it return an interval.
