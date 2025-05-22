@@ -1,6 +1,0 @@
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/pid_logic_lib.dir
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/fuzzy_logic_lib.dir
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/pid_standalone_tester.dir
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/fuzzy_standalone_tester.dir
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/ALL_BUILD.dir
-C:/Users/ataka/OneDrive/Masaüstü/docs/final/build/CMakeFiles/ZERO_CHECK.dir
