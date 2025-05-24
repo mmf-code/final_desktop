@@ -21,10 +21,15 @@ The `agent_control_pkg` contains the current standalone C++ simulation:
 
 The project is evolving towards a ROS 2 architecture with the following packages:
 
-*   **`agent_control_pkg`**: This package will be refactored into a ROS 2 node responsible for the control of individual drones.
-    *   It will continue to use the PID controller.
-    *   It plans to incorporate a General Type-2 Fuzzy Logic System (GT2FLS) for more advanced control strategies (see placeholder `agent_control_pkg/include/agent_control_pkg/gt2_fuzzy_logic_system.hpp`).
-    *   Configuration parameters for PID and Fuzzy Logic controllers will likely reside in `agent_control_pkg/config/`.
+*   **`agent_control_pkg`**: This package is being refactored into a ROS 2 node responsible for the control of individual drones.
+    *   It will continue to use the PID controller (implemented in `pid_controller.hpp`/`.cpp`).
+    *   It now includes an implementation of a General Type-2 Fuzzy Logic System (GT2FLS) for more advanced control strategies.
+        *   **Implementation:** `agent_control_pkg/include/agent_control_pkg/gt2_fuzzy_logic_system.hpp` and `agent_control_pkg/src/gt2_fuzzy_logic_system.cpp`.
+        *   **Functionality:** This system takes crisp inputs for `error`, `dError` (derivative of error), and `wind`. It uses Interval Type-2 Triangular Fuzzy Sets for inputs and fuzzifies them. Rules are defined by specifying antecedents (conditions on input variables) and a consequent (output fuzzy set). The current implementation uses a simplified weighted average for rule aggregation and placeholder methods for Type-2 type reduction and defuzzification (averaging the resulting interval).
+        *   **Configuration:** The FLS is configured programmatically by adding input/output variables, defining their fuzzy sets, and adding rules. The `agent_control_pkg/config/fuzzy_params.yaml` is available for future parameterization.
+        *   **Testing:** A basic test executable `fuzzy_test_main.cpp` exists in `agent_control_pkg/src/` which demonstrates how to set up and run the FLS.
+        *   **ROS 2 Node Integration:** The intended ROS 2 node `agent_controller_node.cpp` that would utilize this FLS is currently a placeholder and does not yet integrate the FLS.
+    *   Configuration parameters for PID and Fuzzy Logic controllers will reside in `agent_control_pkg/config/`.
 *   **`formation_coordinator_pkg`**: This new ROS 2 package will manage and coordinate the formation of multiple drones.
     *   It may utilize optimization algorithms like Particle Swarm Optimization (PSO) (see placeholder `formation_coordinator_pkg/include/formation_coordinator_pkg/particle_swarm_optimizer.hpp`).
     *   Formation configurations will likely be defined in `formation_coordinator_pkg/config/formation_config.yaml`.
