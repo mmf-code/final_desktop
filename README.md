@@ -85,29 +85,59 @@ The `agent_control_pkg` is set up for a local build.
 
 ## Project Structure
 
+This overview highlights the key code, configuration, and documentation files you'll typically interact with.
+
 ```
 .
-├── agent_control_pkg/                # Main package with current C++ PID simulation
-│   ├── src/                          # Source files (.cpp)
-│   ├── include/agent_control_pkg/    # Header files (.hpp)
-│   ├── CMakeLists.txt                # Build script for the standalone simulation
-│   ├── package.xml                   # ROS 2 package manifest (aspirational)
-│   ├── config/                       # Placeholder for future ROS 2 params (pid_params.yaml, fuzzy_params.yaml)
-│   └── launch/                       # Placeholder for future ROS 2 launch files
-├── formation_coordinator_pkg/        # Placeholder for future ROS 2 formation coordination
-│   ├── include/formation_coordinator_pkg/
-│   ├── src/
-│   ├── CMakeLists.txt                # Placeholder
-│   ├── package.xml                   # Placeholder
-│   ├── config/                       # Placeholder for (formation_config.yaml, pso_params.yaml)
-│   └── launch/                       # Placeholder
-├── my_custom_interfaces_pkg/         # Placeholder for future ROS 2 custom messages/services
-│   ├── msg/FormationState.msg
-│   ├── srv/UpdateFormation.srv
-│   ├── CMakeLists.txt                # Placeholder
-│   └── package.xml                   # Placeholder
-├── .vscode/                          # VS Code specific settings
-└── README.md                         # This file
+├── .gitattributes
+├── .gitignore
+├── README.md                         # This file
+├── agent_control_pkg/                # For individual agent control logic
+│   ├── config/                       # Parameters and settings
+│   │   ├── fuzzy_params.yaml         # For the Fuzzy Logic System
+│   │   └── pid_params.yaml           # For the PID Controller
+│   ├── docs/                         # Agent-specific documentation & diagrams
+│   │   ├── drone_0_detailed_analysis.png
+│   │   ├── drone_1_detailed_analysis.png
+│   │   ├── drone_2_detailed_analysis.png
+│   │   └── overall_formation_analysis.png
+│   ├── include/agent_control_pkg/    # C++ Header files (.hpp)
+│   │   ├── agent_controller_node.hpp
+│   │   ├── gt2_fuzzy_logic_system.hpp
+│   │   └── pid_controller.hpp
+│   ├── launch/                       # ROS 2 Launch files
+│   │   └── agent_controller.launch.py
+│   └── src/                          # C++ Source files (.cpp)
+│       ├── agent_control_main.cpp    # Legacy standalone main
+│       ├── agent_controller_node.cpp # (Currently placeholder)
+│       ├── fuzzy_test_main.cpp       # Test for GT2FLS
+│       ├── gt2_fuzzy_logic_system.cpp
+│       └── pid_controller.cpp
+├── docs/                             # General project documentation & diagrams
+│   ├── drone_0_detailed_analysis_fls.png
+│   ├── drone_1_detailed_analysis_fls.png
+│   ├── drone_2_detailed_analysis_fls.png
+│   ├── fls_control_surface.png
+│   ├── fls_membership_functions.png
+│   └── overall_formation_analysis_fls.png
+├── formation_coordinator_pkg/        # For multi-agent formation coordination
+│   ├── config/                       # Parameters and settings
+│   │   ├── formation_config.yaml     # Formation definitions
+│   │   └── pso_params.yaml           # For Particle Swarm Optimization
+│   ├── include/formation_coordinator_pkg/ # C++ Header files (.hpp)
+│   │   ├── formation_coordinator_node.hpp
+│   │   └── particle_swarm_optimizer.hpp
+│   ├── launch/                       # ROS 2 Launch files
+│   │   └── formation_coordinator.launch.py
+│   └── src/                          # C++ Source files (.cpp)
+│       ├── formation_coordinator_main.cpp
+│       ├── formation_coordinator_node.cpp
+│       └── particle_swarm_optimizer.cpp
+└── my_custom_interfaces_pkg/         # Custom message and service definitions
+    ├── msg/                          # Message definitions (.msg)
+    │   └── FormationState.msg
+    └── srv/                          # Service definitions (.srv)
+        └── UpdateFormation.srv
 ```
 
 ## Dependencies (for current C++ build)
