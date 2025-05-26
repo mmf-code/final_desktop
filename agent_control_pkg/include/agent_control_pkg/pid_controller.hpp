@@ -57,6 +57,8 @@ private:
     double integral_;
     bool first_calculation_; // Should be bool
 
+    double previous_measurement_;
+
     // Last PID components
     PIDTerms last_terms_;
 };

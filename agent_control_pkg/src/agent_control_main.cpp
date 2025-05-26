@@ -95,19 +95,25 @@ void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
     auto R = [&](const std::string& e, const std::string& de, const std::string& w, const std::string& out){
         fls.addRule({{{"error",e},{"dError",de},{"wind",w}}, {"correction",out}});
     };
-    // No wind (NWN)
-    R("PB","DZ","NWN","LPC"); R("PS","DZ","NWN","SPC"); R("ZE","DZ","NWN","NC"); R("NS","DZ","NWN","SNC"); R("NB","DZ","NWN","LNC");
-    R("PB","DN","NWN","LPC"); R("PS","DN","NWN","SPC"); R("ZE","DN","NWN","NC"); R("NS","DN","NWN","NC");  R("NB","DN","NWN","SNC");
-    R("PB","DP","NWN","NC");  R("PS","DP","NWN","SNC"); R("ZE","DP","NWN","NC"); R("NS","DP","NWN","SNC"); R("NB","DP","NWN","LNC");
-    // Wind scenarios
-    // CRITICAL: Review these consequents. If positive wind pushes drone to +X, correction should be NEGATIVE.
-    R("ZE","DZ","SPW","SNC"); // Example: ZE, Strong Positive Wind -> Small Negative Correction
-    R("ZE","DZ","SNW","SPC"); // Example: ZE, Strong Negative Wind -> Small Positive Correction
-    R("PB","DZ","SPW","XLPC"); // Error PB, SPW. PID wants LPC. FLS adds more positive if wind opposes.
-    R("NB","DZ","SNW","XLNC"); // Error NB, SNW. PID wants LNC. FLS adds more negative if wind opposes.
-    R("ZE","DZ","WPW","SNC"); // Example: ZE, Weak Positive Wind -> Small Negative Correction
-    R("ZE","DZ","WNW","SPC"); // Example: ZE, Weak Negative Wind -> Small Positive Correction
-    // Add more rules based on your refined strategy for wind interaction with error/dError
+        // No wind (NWN) - Damping rules & basic error correction
+    R("PB","DZ","NWN","LPC"); R("PS","DZ","NWN","SPC"); R("ZE","DZ","NWN","NC");  R("NS","DZ","NWN","SNC"); R("NB","DZ","NWN","LNC");
+    R("PB","DN","NWN","LPC"); R("PS","DN","NWN","SPC"); R("ZE","DN","NWN","SNC"); // MODIFIED: Was NC, now SNC for damping
+    R("NS","DN","NWN","NC");  R("NB","DN","NWN","SNC");
+    R("PB","DP","NWN","NC");  R("PS","DP","NWN","SNC"); R("ZE","DP","NWN","SPC"); // MODIFIED: Was NC, now SPC for damping
+    R("NS","DP","NWN","SNC"); R("NB","DP","NWN","LNC");
+  // Wind scenarios
+    // When error is ZE (Zero Error) and dError is DZ (Zero Change in Error)
+    // MODIFIED: Stronger direct counteraction for wind
+    R("ZE","DZ","SPW","LNC");  // Strong Positive Wind -> Large Negative Correction (was SNC in your original)
+    R("ZE","DZ","SNW","LPC");  // Strong Negative Wind -> Large Positive Correction (was SPC in your original)
+    // MODIFIED: Weaker direct counteraction for weak wind (original was SNC/SPC, keeping those)
+    R("ZE","DZ","WPW","SNC");  // Weak Positive Wind -> Small Negative Correction
+    R("ZE","DZ","WNW","SPC");  // Weak Negative Wind -> Small Positive Correction
+
+    // Rules when error is present WITH wind (These were your original, keeping them for now,
+    // but they might need tuning based on how wind interacts with an existing error)
+    R("PB","DZ","SPW","XLPC");
+    R("NB","DZ","SNW","XLNC");
 }
 // *** END Added Helper Function ***
 
