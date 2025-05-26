@@ -3,11 +3,20 @@ cmake_minimum_required(VERSION 3.16)
 # Set vcpkg toolchain file - ADD THIS BEFORE project()
 set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 
+# Enable compile commands export
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+
 project(agent_control_standalone_test CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Add include directories for all targets
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # Enable testing with CTest
 enable_testing()
@@ -38,6 +47,9 @@ target_include_directories(fuzzy_logic_lib PUBLIC
 # --- Executable for PID standalone test (NOW USES FLS) ---
 add_executable(pid_standalone_tester
     src/agent_control_main.cpp
+)
+target_include_directories(pid_standalone_tester PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(pid_standalone_tester PRIVATE
     pid_logic_lib
@@ -73,3 +85,11 @@ gtest_discover_tests(test_pid_controller)
 #     LIBRARY DESTINATION lib
 #     RUNTIME DESTINATION bin)
 # install(DIRECTORY include/ DESTINATION include)
+
+# Copy compile_commands.json to source directory
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_BINARY_DIR}/compile_commands.json
+            ${CMAKE_SOURCE_DIR}/compile_commands.json)
+endif()

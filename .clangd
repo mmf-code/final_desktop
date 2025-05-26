@@ -1,0 +1,4 @@
+CompileFlags:
+  Add: 
+    - -I${workspaceFolder}/agent_control_pkg/include
+    - -I${workspaceFolder}/build 

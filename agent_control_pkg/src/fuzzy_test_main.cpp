@@ -77,10 +77,19 @@ int main() {
     };
     // No wind (NWN) - Damping rules
     R("PB","DZ","NWN","LPC"); R("PS","DZ","NWN","SPC"); R("ZE","DZ","NWN","NC");  R("NS","DZ","NWN","SNC"); R("NB","DZ","NWN","LNC");
-    R("PB","DN","NWN","LPC"); R("PS","DN","NWN","SPC"); R("ZE","DN","NWN","SNC"); // Changed from NC to SNC for ZE,DN
-    R("NS","DN","NWN","NC");  R("NB","DN","NWN","SNC");
-    R("PB","DP","NWN","NC");  R("PS","DP","NWN","SNC"); R("ZE","DP","NWN","SPC"); // Changed from NC to SPC for ZE,DP
-    R("NS","DP","NWN","SNC"); R("NB","DP","NWN","LNC");
+    // Modified rules: Reduced strength when dError helps reduce error
+    R("PB","DN","NWN","SPC"); // Changed from LPC to SPC (error is positive, DN helps reduce it)
+    R("PS","DN","NWN","NC");  // Changed from SPC to NC (error is positive, DN helps reduce it)
+    R("ZE","DN","NWN","SNC"); // Keep as is (already modified)
+    R("NS","DN","NWN","NC");  // Keep as is
+    R("NB","DN","NWN","SNC"); // Keep as is
+
+    // Modified rules: Reduced strength when dError helps reduce error
+    R("PB","DP","NWN","NC");  // Keep as is
+    R("PS","DP","NWN","SNC"); // Keep as is
+    R("ZE","DP","NWN","SPC"); // Keep as is (already modified)
+    R("NS","DP","NWN","NC");  // Changed from SNC to NC (error is negative, DP helps reduce it)
+    R("NB","DP","NWN","SNC"); // Changed from LNC to SNC (error is negative, DP helps reduce it)
 
     // Wind scenarios
     // When error is ZE (Zero Error) and dError is DZ (Zero Change in Error)
