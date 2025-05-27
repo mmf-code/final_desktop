@@ -37,24 +37,21 @@
         - [X] If oscillations grow, you've passed `Ku_x`; reduce `ZN_KP_TEST_VALUE`.
     - [X] **Measure `Pu_x`:** From the plot corresponding to `Ku_x`, measure the time period of one full cycle of the sustained oscillation (e.g., peak-to-peak time). Average over a few cycles if possible.
 - **Deliverables for this Step:**
-    - [X] Documented `Ku_x` value.
-    - [X] Documented `Pu_x` value.
+    - [X] Documented `Ku_x` value. Ku_x value: Ku = 3.5
+    - [X] Documented `Pu_x` value. Pu_x value: Pu = 3.33 s
     - [X] Saved plot showing the sustained oscillation used to determine `Ku_x` and `Pu_x` (e.g., `zn_sustained_oscillation_KuX.X_PuY.Y.png`).
 
-**Deliverables for Step 1.2:**
-Documented Ku_x value: Ku = 3.5
-Documented Pu_x value: Pu = 3.33 s
 Saved plot showing the sustained oscillation used to determine Ku_x and Pu_x (You have this, e.g., zn_sustained_oscillation_Ku3.5_Pu3.33.png or similar).
 
 ### 🧮 Step 1.3: Calculate Initial PID Gains using Z-N Formulas
 - **Action:** Apply classic Z-N formulas for PID:
-    - [ ] `Kp_zn = 0.6 * Ku_x`
-    - [ ] `Ti_zn = Pu_x / 2.0`
-    - [ ] `Td_zn = Pu_x / 8.0`
+    - [X] `Kp_zn = 0.6 * Ku_x`
+    - [X] `Ti_zn = Pu_x / 2.0`
+    - [X] `Td_zn = Pu_x / 8.0`
 - **Convert to Kp, Ki, Kd form:**
-    - [ ] `Calculated_Kp = Kp_zn`
-    - [ ] `Calculated_Ki = Kp_zn / Ti_zn`
-    - [ ] `Calculated_Kd = Kp_zn * Td_zn`
+    - [X] `Calculated_Kp = Kp_zn`
+    - [X] `Calculated_Ki = Kp_zn / Ti_zn`
+    - [X] `Calculated_Kd = Kp_zn * Td_zn`
 - **Deliverable:** Documented `Calculated_Kp`, `Calculated_Ki`, `Calculated_Kd`.
 
 **Deliverables for Step 1.3:**
