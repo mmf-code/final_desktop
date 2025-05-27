@@ -25,9 +25,11 @@ struct FakeDrone {
 
     // Constructor already initializes to 0.0
 
-    void update(double accel_cmd_x, double accel_cmd_y, double dt) {
-        velocity_x += accel_cmd_x * dt;
-        velocity_y += accel_cmd_y * dt;
+    void update(double accel_cmd_x, double accel_cmd_y, double dt,
+                double external_force_x = 0.0, double external_force_y = 0.0) { // Add external forces
+        // Assume mass = 1 for simplicity, so force = acceleration
+        velocity_x += (accel_cmd_x + external_force_x) * dt; // Add external force component
+        velocity_y += (accel_cmd_y + external_force_y) * dt; // Add external force component
         velocity_x *= 0.98; // Simple drag
         velocity_y *= 0.98; // Simple drag
         position_x += velocity_x * dt;
@@ -120,6 +122,9 @@ void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
 
 
 int main() {
+    // Flag to control FLS usage
+    const bool USE_FLS = true; // SET TO false FOR PID-ONLY RUN, true FOR PID+FLS RUN
+
     const int NUM_DRONES = 3;
     std::vector<FakeDrone> drones(NUM_DRONES);
     std::vector<agent_control_pkg::PIDController> pid_x_controllers;
@@ -168,8 +173,10 @@ int main() {
         pid_y_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
 
         // *** SETUP FLS INSTANCES ***
-        setup_fls_instance(fls_x_controllers[i]);
-        setup_fls_instance(fls_y_controllers[i]); // Using same MFs/Rules for Y-axis FLS for now
+        if (USE_FLS) {
+            setup_fls_instance(fls_x_controllers[i]);
+            setup_fls_instance(fls_y_controllers[i]); // Using same MFs/Rules for Y-axis FLS for now
+        }
         // *** END SETUP FLS ***
 
         initial_values_x_per_phase[0][i] = drones[i].position_x;
@@ -202,7 +209,9 @@ int main() {
     double simulated_wind_y = 0.0;
     // *** End Wind ***
 
-    std::string csv_file_name = "multi_drone_pid_fls_sim_data.csv"; // New CSV name
+    // --- File naming with controller type ---
+    std::string controller_type = USE_FLS ? "pid_fls" : "pid_only";
+    std::string csv_file_name = "multi_drone_" + controller_type + "_sim_data.csv";
     std::ofstream csv_file(csv_file_name);
     if (!csv_file.is_open()) {
         std::cerr << "Error opening CSV file: " << csv_file_name << std::endl;
@@ -399,8 +408,12 @@ int main() {
             agent_control_pkg::PIDController::PIDTerms pid_terms_y = pid_y_controllers[i].calculate_with_terms(drones[i].position_y, dt);
 
             // *** FLS Calculation ***
-            double fls_correction_x = fls_x_controllers[i].calculateOutput(error_x, d_error_x, simulated_wind_x);
-            double fls_correction_y = fls_y_controllers[i].calculateOutput(error_y, d_error_y, simulated_wind_y);
+            double fls_correction_x = 0.0;
+            double fls_correction_y = 0.0;
+            if (USE_FLS) {
+                fls_correction_x = fls_x_controllers[i].calculateOutput(error_x, d_error_x, simulated_wind_x);
+                fls_correction_y = fls_y_controllers[i].calculateOutput(error_y, d_error_y, simulated_wind_y);
+            }
             // *** END FLS Calculation ***
 
             // *** Combine PID + FLS and Clamp ***
@@ -408,7 +421,7 @@ int main() {
             double final_cmd_y = std::clamp(pid_terms_y.total_output + fls_correction_y, output_min, output_max);
             // *** END Combine & Clamp ***
 
-            drones[i].update(final_cmd_x, final_cmd_y, dt);
+            drones[i].update(final_cmd_x, final_cmd_y, dt, simulated_wind_x, simulated_wind_y);
 
             // Store current error for next iteration's dError calculation
             drones[i].prev_error_x = error_x;
@@ -511,9 +524,19 @@ int main() {
 
     // --- Final Metric Calculation & Printing ---
     std::cout << "\n=== FINAL PERFORMANCE METRICS ===\n";
-    std::ofstream metrics_file("performance_metrics.txt");
+    std::string metrics_file_name = "performance_metrics_" + controller_type + ".txt";
+    std::ofstream metrics_file(metrics_file_name);
     if (!metrics_file.is_open()) {
         std::cerr << "Warning: Could not open metrics file. Printing to console only.\n";
+    }
+
+    // Print controller configuration
+    std::string controller_info = USE_FLS ? "PID+FLS Controller" : "PID-Only Controller";
+    std::cout << "\n" << controller_info << " Configuration:\n"
+              << "Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << "\n\n";
+    if (metrics_file.is_open()) {
+        metrics_file << controller_info << " Configuration:\n"
+                    << "Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << "\n\n";
     }
 
     for (int phase_idx = 0; phase_idx < num_metric_phases; ++phase_idx) {
@@ -571,6 +594,9 @@ int main() {
     if (metrics_file.is_open()) metrics_file.close();
     csv_file.close();
 
-    std::cout << "\nSimulation complete. Data written to " << csv_file_name << std::endl;
+    std::cout << "\nSimulation complete. Data written to:\n"
+              << "- CSV data: " << csv_file_name << "\n"
+              << "- Metrics: " << metrics_file_name << "\n"
+              << "Controller type: " << controller_info << std::endl;
     return 0;
 }
