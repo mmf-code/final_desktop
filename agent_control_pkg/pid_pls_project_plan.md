@@ -24,22 +24,22 @@
 ### 🔍 Step 1.2: Iteratively Find Ultimate Gain (`Ku`) and Ultimate Period (`Pu`)
 - **Focus:** Drone 0, X-axis response to the first major setpoint change (e.g., initial position to Phase 1 target).
 - **Iterative Process:**
-    - [ ] **Run 1:** Set `ZN_KP_TEST_VALUE` to a very low value (e.g., 0.1).
-    - [ ] Compile `agent_control_main.cpp`.
-    - [ ] Execute `pid_standalone_tester.exe`.
-    - [ ] **Analyze Plots:** Use `plot_pid_data.py` to visualize the generated CSV. Examine Drone 0 X-axis "Position Error" and "Position Tracking".
-        - [ ] Note: Response should be sluggish, heavily damped.
-    - [ ] **Subsequent Runs:**
-        - [ ] Gradually increase `ZN_KP_TEST_VALUE` (e.g., increments of 0.1, then 0.05, then 0.02 as you get closer).
-        - [ ] For each new `ZN_KP_TEST_VALUE`: Compile, Run, Plot, Analyze.
-        - [ ] **Look for:** Transition from damped oscillations to **sustained, uniform oscillations** (amplitude neither growing nor significantly shrinking over several cycles).
-    - [ ] **Identify `Ku_x`:** The `ZN_KP_TEST_VALUE` that produces these sustained oscillations is `Ku_x`.
-        - [ ] If oscillations grow, you've passed `Ku_x`; reduce `ZN_KP_TEST_VALUE`.
-    - [ ] **Measure `Pu_x`:** From the plot corresponding to `Ku_x`, measure the time period of one full cycle of the sustained oscillation (e.g., peak-to-peak time). Average over a few cycles if possible.
+    - [X] **Run 1:** Set `ZN_KP_TEST_VALUE` to a very low value (e.g., 0.1).
+    - [X] Compile `agent_control_main.cpp`.
+    - [X] Execute `pid_standalone_tester.exe`.
+    - [X] **Analyze Plots:** Use `plot_pid_data.py` to visualize the generated CSV. Examine Drone 0 X-axis "Position Error" and "Position Tracking".
+        - [X] Note: Response should be sluggish, heavily damped.
+    - [X] **Subsequent Runs:**
+        - [X] Gradually increase `ZN_KP_TEST_VALUE` (e.g., increments of 0.1, then 0.05, then 0.02 as you get closer).
+        - [X] For each new `ZN_KP_TEST_VALUE`: Compile, Run, Plot, Analyze.
+        - [X] **Look for:** Transition from damped oscillations to **sustained, uniform oscillations** (amplitude neither growing nor significantly shrinking over several cycles).
+    - [X] **Identify `Ku_x`:** The `ZN_KP_TEST_VALUE` that produces these sustained oscillations is `Ku_x`.
+        - [X] If oscillations grow, you've passed `Ku_x`; reduce `ZN_KP_TEST_VALUE`.
+    - [X] **Measure `Pu_x`:** From the plot corresponding to `Ku_x`, measure the time period of one full cycle of the sustained oscillation (e.g., peak-to-peak time). Average over a few cycles if possible.
 - **Deliverables for this Step:**
-    - [ ] Documented `Ku_x` value.
-    - [ ] Documented `Pu_x` value.
-    - [ ] Saved plot showing the sustained oscillation used to determine `Ku_x` and `Pu_x` (e.g., `zn_sustained_oscillation_KuX.X_PuY.Y.png`).
+    - [X] Documented `Ku_x` value.
+    - [X] Documented `Pu_x` value.
+    - [X] Saved plot showing the sustained oscillation used to determine `Ku_x` and `Pu_x` (e.g., `zn_sustained_oscillation_KuX.X_PuY.Y.png`).
 
 ### 🧮 Step 1.3: Calculate Initial PID Gains using Z-N Formulas
 - **Action:** Apply classic Z-N formulas for PID:
