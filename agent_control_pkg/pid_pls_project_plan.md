@@ -56,19 +56,19 @@ Saved plot showing the sustained oscillation used to determine Ku_x and Pu_x (Yo
 
 ### 🧪 Step 1.4: Implement and Test Initial Z-N Derived PID Gains (PID-Only Run)
 - **Code Modifications (`agent_control_main.cpp`):**
-    - [ ] Set `ZN_TUNING_ACTIVE = false;`.
-    - [ ] Set `USE_FLS_NORMAL_RUN = false;` (or your equivalent for PID-Only mode).
-    - [ ] In the "normal run" section, set the PID gains `kp, ki, kd` to your `Calculated_Kp, Calculated_Ki, Calculated_Kd`.
-    - [ ] Ensure file naming uses `_pid_only_zn_initial` suffixes.
+    - [X] Set `ZN_TUNING_ACTIVE = false;`.
+    - [X] Set `USE_FLS_NORMAL_RUN = false;` (or your equivalent for PID-Only mode).
+    - [X] In the "normal run" section, set the PID gains `kp, ki, kd` to your `Calculated_Kp, Calculated_Ki, Calculated_Kd`.
+    - [X] Ensure file naming uses `_pid_only_zn_initial` suffixes.
 - **Action:**
-    - [ ] Compile.
-    - [ ] Run `pid_standalone_tester.exe` (full multi-phase simulation).
+    - [X] Compile.
+    - [X] Run `pid_standalone_tester.exe` (full multi-phase simulation).
 - **Analyze:**
-    - [ ] Examine plots and metrics. Expect a potentially aggressive response (e.g., ~25% overshoot).
+    - [X] Examine plots and metrics. Expect a potentially aggressive response (e.g., ~25% overshoot).
 - **Deliverables:**
-    - [ ] `multi_drone_pid_only_zn_initial.csv`
-    - [ ] `performance_metrics_pid_only_zn_initial.txt`
-    - [ ] Saved set of plots (overall and individual drones) for this run.
+    - [X] `multi_drone_pid_only_zn_initial.csv`
+    - [X] `performance_metrics_pid_only_zn_initial.txt`
+    - [X] Saved set of plots (overall and individual drones) for this run.
 
 ### 👌 Step 1.5: De-tune and Finalize PID-Only Baseline Controller
 - **Goal:** Achieve a "good" PID-Only performance: reasonable overshoot, acceptable settling, and how it inherently handles disturbances. This is your benchmark.
