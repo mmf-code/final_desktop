@@ -45,19 +45,14 @@ Saved plot showing the sustained oscillation used to determine Ku_x and Pu_x (Yo
 
 ### 🧮 Step 1.3: Calculate Initial PID Gains using Z-N Formulas
 - **Action:** Apply classic Z-N formulas for PID:
-    - [X] `Kp_zn = 0.6 * Ku_x`
+    - [X] `Kp_zn = 0.6 * Ku_x` 
     - [X] `Ti_zn = Pu_x / 2.0`
     - [X] `Td_zn = Pu_x / 8.0`
 - **Convert to Kp, Ki, Kd form:**
-    - [X] `Calculated_Kp = Kp_zn`
-    - [X] `Calculated_Ki = Kp_zn / Ti_zn`
-    - [X] `Calculated_Kd = Kp_zn * Td_zn`
+    - [X] `Calculated_Kp = Kp_zn` Calculated_Kp = 2.10
+    - [X] `Calculated_Ki = Kp_zn / Ti_zn` Calculated_Ki = 1.26 (from 1.261)
+    - [X] `Calculated_Kd = Kp_zn * Td_zn` Calculated_Kd = 0.87 (from 0.874 or 0.8736)
 - **Deliverable:** Documented `Calculated_Kp`, `Calculated_Ki`, `Calculated_Kd`.
-
-**Deliverables for Step 1.3:**
-Documented Calculated_Kp = 2.10
-Documented Calculated_Ki = 1.26 (from 1.261)
-Documented Calculated_Kd = 0.87 (from 0.874 or 0.8736)
 
 ### 🧪 Step 1.4: Implement and Test Initial Z-N Derived PID Gains (PID-Only Run)
 - **Code Modifications (`agent_control_main.cpp`):**
