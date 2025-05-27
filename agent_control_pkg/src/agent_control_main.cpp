@@ -131,28 +131,16 @@ void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
 
 int main() {
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
-    const bool ZN_TUNING_ACTIVE = true;  // SET TO true TO RUN Z-N Ku/Pu finding, false for normal PID/FLS run
-                                        // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
+    const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
+                                         // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
 
-    // Current Kp being tested for Z-N (YOU WILL MANUALLY CHANGE THIS VALUE AND RECOMPILE)
-    // START LOW AND INCREASE UNTIL SUSTAINED OSCILLATIONS ON DRONE 0 X-AXIS
-    const double ZN_KP_TEST_VALUE = 4.0; // <<<< STARTING LOW AS PER PLANNER, MANUALLY ITERATE THIS VALUE
-                                        // Suggested progression: 0.1, 0.2, ... then finer increments.
+    // Current Kp being tested for Z-N (not used when ZN_TUNING_ACTIVE is false)
+    const double ZN_KP_TEST_VALUE = 2.0; // Not used in this run
 
     // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
 
-    // --- FLS Control for Normal (Non-ZN) Runs ---
-    // This flag determines if FLS is used when ZN_TUNING_ACTIVE is false.
-    // It will be toggled in later steps of the planner:
-    // - false for PID-Only runs (Steps 1.4, 1.5)
-    // - true for PID+FLS runs (Step 2.1 onwards)
-    const bool USE_FLS_IN_NORMAL_MODE = false; // Default for now. For ZN tuning, FLS is always off.
-
-    // Effective FLS usage flag for the current run
-    const bool USE_FLS = !ZN_TUNING_ACTIVE && USE_FLS_IN_NORMAL_MODE;
-    // If ZN_TUNING_ACTIVE is true, USE_FLS will be false.
-    // If ZN_TUNING_ACTIVE is false, USE_FLS depends on USE_FLS_IN_NORMAL_MODE.
-
+    // Flag to control FLS usage
+    const bool USE_FLS = !ZN_TUNING_ACTIVE && false; // Set to false for PID-only run with Z-N gains
 
     const int NUM_DRONES = 3;
     std::vector<FakeDrone> drones(NUM_DRONES);
@@ -168,30 +156,103 @@ int main() {
 
     if (ZN_TUNING_ACTIVE) {
         std::cout << "!!!!!!!! ZIEGLER-NICHOLS Ku/Pu FINDING MODE ACTIVE !!!!!!!!" << std::endl;
-        std::cout << "Testing with Kp = " << std::fixed << std::setprecision(3) << ZN_KP_TEST_VALUE
-                  << ", Ki = 0, Kd = 0" << std::endl;
+        std::cout << "Testing with Kp = " << ZN_KP_TEST_VALUE << ", Ki = 0, Kd = 0" << std::endl;
         std::cout << "Observe Drone 0 X-axis for sustained oscillations." << std::endl;
-        std::cout << "FLS is DISABLED. Wind is DISABLED." << std::endl;
         kp = ZN_KP_TEST_VALUE;
         ki = 0.0;  // Must be 0 for Z-N tuning
         kd = 0.0;  // Must be 0 for Z-N tuning
     } else {
-        // These are your normal operating PID gains (or Z-N derived and de-tuned gains)
-        // These will be set according to planner steps 1.3, 1.4, 1.5, etc.
-        // Placeholder values for now if ZN_TUNING_ACTIVE is somehow false prematurely.
-        kp = 1.5;
-        ki = 0.05;
-        kd = 1.2;
-        std::cout << "Normal Run Mode Active (ZN_TUNING_ACTIVE = false)" << std::endl;
+        // Z-N derived PID gains (from your tuning process)
+        kp = 2.10;  // Z-N calculated value
+        ki = 1.26;  // Z-N calculated value
+        kd = 0.87;  // Z-N calculated value
+        std::cout << "Running with Z-N derived PID gains:" << std::endl;
+        std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
         if (USE_FLS) {
-            std::cout << "Controller: PID+FLS with Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << std::endl;
+            std::cout << "FLS is ENABLED" << std::endl;
         } else {
-            std::cout << "Controller: PID-Only with Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << std::endl;
+            std::cout << "FLS is DISABLED (PID-only run)" << std::endl;
         }
     }
 
     double output_min = -10.0;
     double output_max = 10.0;
+
+    // Initialize controllers with Z-N derived gains
+    for (int i = 0; i < NUM_DRONES; ++i) {
+        // Initialize drone positions
+        drones[i].position_x = static_cast<double>(i) * 2.0 - 2.0;
+        drones[i].position_y = 0.0;
+        
+        // Initialize PID controllers
+        pid_x_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
+        pid_y_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
+        
+        // Initialize FLS if enabled
+        if (USE_FLS) {
+            setup_fls_instance(fls_x_controllers[i]);
+            setup_fls_instance(fls_y_controllers[i]);
+        }
+    }
+
+    // --- File naming with controller type ---
+    std::string csv_file_name_suffix;
+    std::string metrics_file_name_suffix;
+    std::string controller_type_log_msg;
+
+    if (ZN_TUNING_ACTIVE) {
+        csv_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
+        metrics_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
+        controller_type_log_msg = "Z-N P-Only Test Controller";
+    } else {
+        if (USE_FLS) {
+            csv_file_name_suffix = "_pid_fls_zn";
+            metrics_file_name_suffix = "_pid_fls_zn";
+            controller_type_log_msg = "PID+FLS Controller with Z-N Gains";
+        } else {
+            csv_file_name_suffix = "_pid_only_zn_initial";
+            metrics_file_name_suffix = "_pid_only_zn_initial";
+            controller_type_log_msg = "PID-Only Controller with Initial Z-N Gains";
+        }
+    }
+
+    // Open CSV file for data logging
+    std::string csv_file_name = "multi_drone" + csv_file_name_suffix + "_sim_data.csv";
+    std::ofstream csv_file(csv_file_name);
+    if (!csv_file.is_open()) {
+        std::cerr << "Error opening CSV file!" << std::endl;
+        return 1;
+    }
+
+// Write CSV header
+csv_file << "Time";
+for (int i = 0; i < NUM_DRONES; ++i) {
+    csv_file << ",TargetX" << i << ",CurrentX" << i << ",ErrorX" << i
+             << ",PIDOutX" << i << ",FLSCorrX" << i << ",FinalCmdX" << i
+             << ",PTermX" << i << ",ITermX" << i << ",DTermX" << i   // <<< X-axis PID Term headers
+             << ",TargetY" << i << ",CurrentY" << i << ",ErrorY" << i
+             << ",PIDOutY" << i << ",FLSCorrY" << i << ",FinalCmdY" << i
+             << ",PTermY" << i << ",ITermY" << i << ",DTermY" << i;  // <<< Y-axis PID Term headers
+}
+csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what your Python script expects for wind columns
+
+    // Open metrics file
+    std::string metrics_file_name = "performance_metrics" + metrics_file_name_suffix + ".txt";
+    std::ofstream metrics_file;
+    if (!ZN_TUNING_ACTIVE) { // Only create metrics file if not in P-only ZN step-by-step tuning
+        metrics_file.open(metrics_file_name);
+        if (!metrics_file.is_open()) {
+            std::cerr << "Error: Could not open metrics file: " << metrics_file_name << std::endl;
+            csv_file.close();  // Close CSV file before returning
+            return 1;
+        }
+
+        // Write metrics file header
+        metrics_file << std::fixed << std::setprecision(3);
+        metrics_file << controller_type_log_msg << "\n";
+        metrics_file << "PID Gains: Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << "\n";
+        metrics_file << "=======================================================================\n";
+    }
 
     // --- Phase Management ---
     int current_phase = 1;
@@ -222,8 +283,8 @@ int main() {
     for (int i = 0; i < NUM_DRONES; ++i) {
         drones[i].position_x = static_cast<double>(i) * 2.0 - 2.0;
         drones[i].position_y = 0.0;
-        pid_x_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
-        pid_y_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
+        pid_x_controllers[i].setSetpoint(target_values_x_per_phase[0][i]);
+        pid_y_controllers[i].setSetpoint(target_values_y_per_phase[0][i]);
 
         // *** SETUP FLS INSTANCES ***
         if (USE_FLS) { // This check correctly uses the effective USE_FLS flag
@@ -261,60 +322,6 @@ int main() {
     double simulated_wind_x = 0.0;
     double simulated_wind_y = 0.0;
     // *** End Wind ***
-
-    // --- File naming with controller type ---
-    std::string csv_file_name;
-    std::string metrics_file_name;
-    std::string controller_type_log_msg; // For console/metrics file header
-
-    if (ZN_TUNING_ACTIVE) {
-        std::ostringstream oss_kp_val;
-        oss_kp_val << std::fixed << std::setprecision(3) << ZN_KP_TEST_VALUE;
-        std::string kp_val_for_fname = oss_kp_val.str(); // e.g., "0.100" or "4.000"
-
-        csv_file_name = "multi_drone_zn_test_kp" + kp_val_for_fname + "_sim_data.csv";
-        metrics_file_name = "metrics_zn_test_kp" + kp_val_for_fname + ".txt";
-        // Log message already set in the PID gains section for ZN_TUNING_ACTIVE
-        controller_type_log_msg = "Z-N P-Only Test Controller"; // Basic message
-    } else {
-        // This section will be guided by specific flags in later planner steps
-        // (e.g., IS_PID_ONLY_ZN_INITIAL_RUN, IS_PID_ONLY_FINAL_BASELINE_RUN etc.)
-        // For now, a generic fallback based on USE_FLS_IN_NORMAL_MODE
-        std::string base_suffix;
-        if (USE_FLS_IN_NORMAL_MODE) { // This is the effective FLS state for non-ZN runs
-            base_suffix = "_pid_fls_NORMAL"; // Placeholder name
-            controller_type_log_msg = "PID+FLS Controller (Normal Run)";
-        } else {
-            base_suffix = "_pid_only_NORMAL"; // Placeholder name
-            controller_type_log_msg = "PID-Only Controller (Normal Run)";
-        }
-        // These will be overridden by specific instructions in steps 1.4, 1.5, 2.1, 3.1
-        csv_file_name = "multi_drone" + base_suffix + "_sim_data.csv";
-        metrics_file_name = "performance_metrics" + base_suffix + ".txt";
-    }
-
-
-    std::ofstream csv_file(csv_file_name);
-    if (!csv_file.is_open()) {
-        std::cerr << "Error opening CSV file: " << csv_file_name << std::endl;
-        return 1;
-    }
-
-    // --- UPDATED CSV HEADER ---
-    csv_file << "Time";
-    for (int i = 0; i < NUM_DRONES; ++i) {
-        csv_file << ",TargetX" << i << ",CurrentX" << i << ",ErrorX" << i
-                 << ",PIDOutX" << i << ",FLSCorrX" << i << ",FinalCmdX" << i // Added FLS
-                 << ",PTermX" << i << ",ITermX" << i << ",DTermX" << i
-                 << ",TargetY" << i << ",CurrentY" << i << ",ErrorY" << i
-                 << ",PIDOutY" << i << ",FLSCorrY" << i << ",FinalCmdY" << i // Added FLS
-                 << ",PTermY" << i << ",ITermY" << i << ",DTermY" << i;
-    }
-    csv_file << ",SimWindX,SimWindY\n"; // Added wind
-    // --- END UPDATED CSV HEADER ---
-
-    // Console output precision setting
-    // std::cout << std::fixed << std::setprecision(3); // Already set if ZN_TUNING_ACTIVE earlier
 
     // --- Simulation Loop ---
     for (double time_now = 0.0; time_now <= simulation_time; time_now += dt) {
@@ -599,12 +606,7 @@ int main() {
 
     // --- Final Metric Calculation & Printing ---
     std::cout << "\n=== FINAL PERFORMANCE METRICS ===\n";
-    // metrics_file_name is already set based on ZN_TUNING_ACTIVE or other flags
-    std::ofstream metrics_file(metrics_file_name);
-    if (!metrics_file.is_open()) {
-        std::cerr << "Warning: Could not open metrics file: " << metrics_file_name << ". Printing to console only.\n";
-    }
-
+    
     // Print controller configuration
     std::string config_details;
     std::ostringstream oss_config;
@@ -642,7 +644,9 @@ int main() {
 
 
         std::cout << "\n--- METRICS FOR PHASE " << phase_idx + 1 << " ---" << std::endl;
-        if (metrics_file.is_open()) metrics_file << "\n--- METRICS FOR PHASE " << phase_idx + 1 << " ---\n";
+        if (metrics_file.is_open()) {
+            metrics_file << "\n--- METRICS FOR PHASE " << phase_idx + 1 << " ---\n";
+        }
 
         for (int i = 0; i < NUM_DRONES; ++i) {
             double initial_x = initial_values_x_per_phase[phase_idx][i];
@@ -696,17 +700,23 @@ int main() {
                     std::to_string(mets_y.settling_time_2percent) + "s" : "Did not settle") << "\n";
 
             std::cout << ss.str();
-            if (metrics_file.is_open()) metrics_file << ss.str();
+            if (metrics_file.is_open()) {
+                metrics_file << ss.str();
+            }
         }
     }
 
-    if (metrics_file.is_open()) metrics_file.close();
+    if (metrics_file.is_open()) {
+        metrics_file.close();
+    }
     csv_file.close();
 
     std::cout << "\nSimulation complete. Data written to:\n"
-              << "- CSV data: " << csv_file_name << "\n"
-              << "- Metrics: " << metrics_file_name << "\n"
-              << "Controller type used: " << controller_type_log_msg 
+              << "- CSV data: " << csv_file_name << "\n";
+    if (!ZN_TUNING_ACTIVE) {
+        std::cout << "- Metrics: " << metrics_file_name << "\n";
+    }
+    std::cout << "Controller type used: " << controller_type_log_msg 
               << " (Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << ")" << std::endl;
     return 0;
 }
