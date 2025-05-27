@@ -1,7 +1,7 @@
 // agent_control_main.cpp with FLS Integration and Full Metrics
 
-#include "agent_control_pkg/pid_controller.hpp"         // Your PID class
-#include "agent_control_pkg/gt2_fuzzy_logic_system.hpp" // Your FLS class
+#include "../include/agent_control_pkg/pid_controller.hpp"         // Your PID class
+#include "../include/agent_control_pkg/gt2_fuzzy_logic_system.hpp" // Your FLS class
 #include <iostream>
 #include <vector>
 #include <iomanip>
@@ -50,6 +50,14 @@ struct PerformanceMetrics {
         settling_time_2percent = -1.0;
     }
 };
+
+// Custom clamp function since std::clamp might not be available
+template<typename T>
+T clamp(T value, T min, T max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
 
 // *** ADDED Helper function to initialize an FLS instance ***
 void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
@@ -122,8 +130,20 @@ void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
 
 
 int main() {
-    // Flag to control FLS usage
-    const bool USE_FLS = true; // SET TO false FOR PID-ONLY RUN, true FOR PID+FLS RUN
+    // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
+    const bool ZN_TUNING_ACTIVE = true;  // SET TO true TO RUN Z-N Ku/Pu finding, false for normal PID/FLS run
+                                        // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
+
+    // Current Kp being tested for Z-N (YOU WILL MANUALLY CHANGE THIS VALUE AND RECOMPILE)
+    // START LOW AND INCREASE UNTIL SUSTAINED OSCILLATIONS ON DRONE 0 X-AXIS
+    const double ZN_KP_TEST_VALUE = 4.0; // <<<< MANUALLY ITERATE THIS VALUE
+                                        // Suggested progression: 0.5, 1.0, 2.0, 3.0, etc.
+                                        // When oscillations start, use smaller increments
+
+    // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
+
+    // Flag to control FLS usage (will be forced to false during Z-N tuning)
+    const bool USE_FLS = !ZN_TUNING_ACTIVE && true; // Only use FLS when not in Z-N tuning mode
 
     const int NUM_DRONES = 3;
     std::vector<FakeDrone> drones(NUM_DRONES);
@@ -134,9 +154,24 @@ int main() {
     std::vector<agent_control_pkg::GT2FuzzyLogicSystem> fls_y_controllers(NUM_DRONES);
     // *** END FLS INSTANCES ***
 
-    double kp = 1.5; // Your tuned gains
-    double ki = 0.05;
-    double kd = 1.2;
+    // --- PID Controller Gains ---
+    double kp, ki, kd;
+
+    if (ZN_TUNING_ACTIVE) {
+        std::cout << "!!!!!!!! ZIEGLER-NICHOLS Ku/Pu FINDING MODE ACTIVE !!!!!!!!" << std::endl;
+        std::cout << "Testing with Kp = " << ZN_KP_TEST_VALUE << ", Ki = 0, Kd = 0" << std::endl;
+        std::cout << "Observe Drone 0 X-axis for sustained oscillations." << std::endl;
+        kp = ZN_KP_TEST_VALUE;
+        ki = 0.0;  // Must be 0 for Z-N tuning
+        kd = 0.0;  // Must be 0 for Z-N tuning
+    } else {
+        // These are your normal operating PID gains (or Z-N derived and de-tuned gains)
+        kp = 1.5;  // Your current gains (will be replaced with Z-N derived gains later)
+        ki = 0.05;
+        kd = 1.2;
+        std::cout << "Normal PID (+FLS if enabled) run with Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << std::endl;
+    }
+
     double output_min = -10.0;
     double output_max = 10.0;
 
@@ -210,8 +245,27 @@ int main() {
     // *** End Wind ***
 
     // --- File naming with controller type ---
-    std::string controller_type = USE_FLS ? "pid_fls" : "pid_only";
-    std::string csv_file_name = "multi_drone_" + controller_type + "_sim_data.csv";
+    std::string csv_file_name_suffix = "";
+    std::string metrics_file_name_suffix = "";
+    std::string controller_type_log_msg = "";
+
+    if (ZN_TUNING_ACTIVE) {
+        csv_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
+        metrics_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
+        controller_type_log_msg = "Z-N P-Only Test Controller";
+    } else {
+        if (USE_FLS) {
+            csv_file_name_suffix = "_pid_fls";
+            metrics_file_name_suffix = "_pid_fls";
+            controller_type_log_msg = "PID+FLS Controller";
+        } else {
+            csv_file_name_suffix = "_pid_only";
+            metrics_file_name_suffix = "_pid_only";
+            controller_type_log_msg = "PID-Only Controller";
+        }
+    }
+
+    std::string csv_file_name = "multi_drone" + csv_file_name_suffix + "_sim_data.csv";
     std::ofstream csv_file(csv_file_name);
     if (!csv_file.is_open()) {
         std::cerr << "Error opening CSV file: " << csv_file_name << std::endl;
@@ -417,8 +471,8 @@ int main() {
             // *** END FLS Calculation ***
 
             // *** Combine PID + FLS and Clamp ***
-            double final_cmd_x = std::clamp(pid_terms_x.total_output + fls_correction_x, output_min, output_max);
-            double final_cmd_y = std::clamp(pid_terms_y.total_output + fls_correction_y, output_min, output_max);
+            double final_cmd_x = clamp(pid_terms_x.total_output + fls_correction_x, output_min, output_max);
+            double final_cmd_y = clamp(pid_terms_y.total_output + fls_correction_y, output_min, output_max);
             // *** END Combine & Clamp ***
 
             drones[i].update(final_cmd_x, final_cmd_y, dt, simulated_wind_x, simulated_wind_y);
@@ -524,14 +578,14 @@ int main() {
 
     // --- Final Metric Calculation & Printing ---
     std::cout << "\n=== FINAL PERFORMANCE METRICS ===\n";
-    std::string metrics_file_name = "performance_metrics_" + controller_type + ".txt";
+    std::string metrics_file_name = "performance_metrics_" + metrics_file_name_suffix + ".txt";
     std::ofstream metrics_file(metrics_file_name);
     if (!metrics_file.is_open()) {
         std::cerr << "Warning: Could not open metrics file. Printing to console only.\n";
     }
 
     // Print controller configuration
-    std::string controller_info = USE_FLS ? "PID+FLS Controller" : "PID-Only Controller";
+    std::string controller_info = controller_type_log_msg;
     std::cout << "\n" << controller_info << " Configuration:\n"
               << "Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << "\n\n";
     if (metrics_file.is_open()) {
