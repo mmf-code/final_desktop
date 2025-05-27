@@ -8,48 +8,50 @@
 
 ### ⚙️ Step 1.1: Prepare for Ziegler-Nichols (Z-N) Ultimate Sensitivity Tuning
 - **Code Modifications (`agent_control_main.cpp`):**
-    - [ ] Implement `ZN_TUNING_ACTIVE` boolean flag (e.g., `const bool ZN_TUNING_ACTIVE = true;`).
-    - [ ] Implement `ZN_KP_TEST_VALUE` constant (e.g., `const double ZN_KP_TEST_VALUE = 0.1;`).
-    - [ ] **Conditional PID Initialization:**
-        - [ ] If `ZN_TUNING_ACTIVE == true`:
-            - [ ] Initialize ALL PID controllers (all drones, X and Y axes) with `kp = ZN_KP_TEST_VALUE`, `ki = 0.0`, `kd = 0.0`.
-            - [ ] Ensure FLS is effectively disabled (e.g., `current_run_uses_fls` flag set to `false`).
-    - [ ] **File Naming for Z-N Iterations:**
-        - [ ] Modify CSV output filename to be unique for each Z-N test run, incorporating `ZN_KP_TEST_VALUE` (e.g., `multi_drone_zn_test_kp0.100.csv`).
-        - [ ] Modify metrics output filename similarly (e.g., `metrics_zn_test_kp0.100.txt`).
-    - [ ] **Simulation Settings for Z-N Test:**
-        - [ ] Ensure `simulation_time` is sufficient to observe sustained oscillations (e.g., 30-60s might be enough, focusing on the response to the first setpoint change in Phase 1).
-        - [ ] Wind disturbances should ideally be OFF or minimal during the Ku/Pu finding phase to get a clean system response. If wind *must* be on for the setpoint change to occur as desired, note its presence. *(Self-correction: For finding Ku/Pu, it's best to have a clean step response without other disturbances if possible. Your Phase 1 has a wind starting at t=5s. Consider if you can delay this wind or use a simpler setpoint change for Z-N if the wind interferes with observing pure P-controller oscillations).*
+    - [X] Implement `ZN_TUNING_ACTIVE` boolean flag (e.g., `const bool ZN_TUNING_ACTIVE = true;`).
+    - [X] Implement `ZN_KP_TEST_VALUE` constant (e.g., `const double ZN_KP_TEST_VALUE = 0.1;`).
+    - [x] **Conditional PID Initialization:**
+        - [x] If `ZN_TUNING_ACTIVE == true`:
+            - [x] Initialize ALL PID controllers (all drones, X and Y axes) with `kp = ZN_KP_TEST_VALUE`, `ki = 0.0`, `kd = 0.0`.
+            - [x] Ensure FLS is effectively disabled (e.g., `current_run_uses_fls` flag set to `false`).
+    - [x] **File Naming for Z-N Iterations:**
+        - [x] Modify CSV output filename to be unique for each Z-N test run, incorporating `ZN_KP_TEST_VALUE` (e.g., `multi_drone_zn_test_kp0.100.csv`).
+        - [x] Modify metrics output filename similarly (e.g., `metrics_zn_test_kp0.100.txt`).
+    - [x] **Simulation Settings for Z-N Test:**
+        - [x] Ensure `simulation_time` is sufficient to observe sustained oscillations (e.g., 30-60s might be enough, focusing on the response to the first setpoint change in Phase 1).
+        - [x] Wind disturbances should ideally be OFF or minimal during the Ku/Pu finding phase to get a clean system response. If wind *must* be on for the setpoint change to occur as desired, note its presence. *(Self-correction: For finding Ku/Pu, it's best to have a clean step response without other disturbances if possible. Your Phase 1 has a wind starting at t=5s. Consider if you can delay this wind or use a simpler setpoint change for Z-N if the wind interferes with observing pure P-controller oscillations).*
 
 ### 🔍 Step 1.2: Iteratively Find Ultimate Gain (`Ku`) and Ultimate Period (`Pu`)
 - **Focus:** Drone 0, X-axis response to the first major setpoint change (e.g., initial position to Phase 1 target).
 - **Iterative Process:**
-    - [ ] **Run 1:** Set `ZN_KP_TEST_VALUE` to a very low value (e.g., 0.1).
-    - [ ] Compile `agent_control_main.cpp`.
-    - [ ] Execute `pid_standalone_tester.exe`.
-    - [ ] **Analyze Plots:** Use `plot_pid_data.py` to visualize the generated CSV. Examine Drone 0 X-axis "Position Error" and "Position Tracking".
-        - [ ] Note: Response should be sluggish, heavily damped.
-    - [ ] **Subsequent Runs:**
-        - [ ] Gradually increase `ZN_KP_TEST_VALUE` (e.g., increments of 0.1, then 0.05, then 0.02 as you get closer).
-        - [ ] For each new `ZN_KP_TEST_VALUE`: Compile, Run, Plot, Analyze.
-        - [ ] **Look for:** Transition from damped oscillations to **sustained, uniform oscillations** (amplitude neither growing nor significantly shrinking over several cycles).
-    - [ ] **Identify `Ku_x`:** The `ZN_KP_TEST_VALUE` that produces these sustained oscillations is `Ku_x`.
-        - [ ] If oscillations grow, you've passed `Ku_x`; reduce `ZN_KP_TEST_VALUE`.
-    - [ ] **Measure `Pu_x`:** From the plot corresponding to `Ku_x`, measure the time period of one full cycle of the sustained oscillation (e.g., peak-to-peak time). Average over a few cycles if possible.
+    - [X] **Run 1:** Set `ZN_KP_TEST_VALUE` to a very low value (e.g., 0.1).
+    - [X] Compile `agent_control_main.cpp`.
+    - [X] Execute `pid_standalone_tester.exe`.
+    - [X] **Analyze Plots:** Use `plot_pid_data.py` to visualize the generated CSV. Examine Drone 0 X-axis "Position Error" and "Position Tracking".
+        - [X] Note: Response should be sluggish, heavily damped.
+    - [X] **Subsequent Runs:**
+        - [X] Gradually increase `ZN_KP_TEST_VALUE` (e.g., increments of 0.1, then 0.05, then 0.02 as you get closer).
+        - [X] For each new `ZN_KP_TEST_VALUE`: Compile, Run, Plot, Analyze.
+        - [X] **Look for:** Transition from damped oscillations to **sustained, uniform oscillations** (amplitude neither growing nor significantly shrinking over several cycles).
+    - [X] **Identify `Ku_x`:** The `ZN_KP_TEST_VALUE` that produces these sustained oscillations is `Ku_x`.
+        - [X] If oscillations grow, you've passed `Ku_x`; reduce `ZN_KP_TEST_VALUE`.
+    - [X] **Measure `Pu_x`:** From the plot corresponding to `Ku_x`, measure the time period of one full cycle of the sustained oscillation (e.g., peak-to-peak time). Average over a few cycles if possible.
 - **Deliverables for this Step:**
-    - [ ] Documented `Ku_x` value.
-    - [ ] Documented `Pu_x` value.
-    - [ ] Saved plot showing the sustained oscillation used to determine `Ku_x` and `Pu_x` (e.g., `zn_sustained_oscillation_KuX.X_PuY.Y.png`).
+    - [X] Documented `Ku_x` value. Ku_x value: Ku = 3.5
+    - [X] Documented `Pu_x` value. Pu_x value: Pu = 3.33 s
+    - [X] Saved plot showing the sustained oscillation used to determine `Ku_x` and `Pu_x` (e.g., `zn_sustained_oscillation_KuX.X_PuY.Y.png`).
+
+Saved plot showing the sustained oscillation used to determine Ku_x and Pu_x (You have this, e.g., zn_sustained_oscillation_Ku3.5_Pu3.33.png or similar).
 
 ### 🧮 Step 1.3: Calculate Initial PID Gains using Z-N Formulas
 - **Action:** Apply classic Z-N formulas for PID:
-    - [ ] `Kp_zn = 0.6 * Ku_x`
-    - [ ] `Ti_zn = Pu_x / 2.0`
-    - [ ] `Td_zn = Pu_x / 8.0`
+    - [X] `Kp_zn = 0.6 * Ku_x` 
+    - [X] `Ti_zn = Pu_x / 2.0`
+    - [X] `Td_zn = Pu_x / 8.0`
 - **Convert to Kp, Ki, Kd form:**
-    - [ ] `Calculated_Kp = Kp_zn`
-    - [ ] `Calculated_Ki = Kp_zn / Ti_zn`
-    - [ ] `Calculated_Kd = Kp_zn * Td_zn`
+    - [X] `Calculated_Kp = Kp_zn` Calculated_Kp = 2.10
+    - [X] `Calculated_Ki = Kp_zn / Ti_zn` Calculated_Ki = 1.26 (from 1.261)
+    - [X] `Calculated_Kd = Kp_zn * Td_zn` Calculated_Kd = 0.87 (from 0.874 or 0.8736)
 - **Deliverable:** Documented `Calculated_Kp`, `Calculated_Ki`, `Calculated_Kd`.
 
 ### 🧪 Step 1.4: Implement and Test Initial Z-N Derived PID Gains (PID-Only Run)
