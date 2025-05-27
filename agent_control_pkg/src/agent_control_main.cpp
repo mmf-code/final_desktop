@@ -10,6 +10,7 @@
 #include <limits>    // For std::numeric_limits
 #include <string>    // For std::to_string
 #include <algorithm> // For std::clamp
+#include <sstream>   // For std::stringstream
 
 // FakeDrone struct
 struct FakeDrone {
@@ -134,20 +135,30 @@ int main() {
     double output_min = -10.0;
     double output_max = 10.0;
 
-    // --- Performance Metric Storage (same as your last working version) ---
-    std::vector<std::vector<PerformanceMetrics>> drone_metrics_x(NUM_DRONES, std::vector<PerformanceMetrics>(2));
-    std::vector<std::vector<PerformanceMetrics>> drone_metrics_y(NUM_DRONES, std::vector<PerformanceMetrics>(2));
-    std::vector<double> initial_values_x_phase1(NUM_DRONES), initial_values_y_phase1(NUM_DRONES);
-    std::vector<double> target_values_x_phase1(NUM_DRONES), target_values_y_phase1(NUM_DRONES);
-    std::vector<double> initial_values_x_phase2(NUM_DRONES), initial_values_y_phase2(NUM_DRONES);
-    std::vector<double> target_values_x_phase2(NUM_DRONES), target_values_y_phase2(NUM_DRONES);
-    std::vector<bool> in_settling_band_x_phase1(NUM_DRONES, false), in_settling_band_y_phase1(NUM_DRONES, false);
-    std::vector<bool> in_settling_band_x_phase2(NUM_DRONES, false), in_settling_band_y_phase2(NUM_DRONES, false);
-    std::vector<double> time_entered_settling_x_phase1(NUM_DRONES, -1.0), time_entered_settling_y_phase1(NUM_DRONES, -1.0);
-    std::vector<double> time_entered_settling_x_phase2(NUM_DRONES, -1.0), time_entered_settling_y_phase2(NUM_DRONES, -1.0);
-    bool phase2_active = false;
+    // --- Phase Management ---
+    int current_phase = 1;
+    const int MAX_PHASES = 4; // Four distinct phases
+    std::vector<bool> phase_triggered(MAX_PHASES + 1, false); // To ensure each phase change happens once
+
+    // --- Performance Metric Storage (Extended for more phases) ---
+    int num_metric_phases = MAX_PHASES;
+    std::vector<std::vector<PerformanceMetrics>> drone_metrics_x(NUM_DRONES, std::vector<PerformanceMetrics>(num_metric_phases));
+    std::vector<std::vector<PerformanceMetrics>> drone_metrics_y(NUM_DRONES, std::vector<PerformanceMetrics>(num_metric_phases));
+    
+    // Store initial and target values for each phase
+    std::vector<std::vector<double>> initial_values_x_per_phase(num_metric_phases, std::vector<double>(NUM_DRONES));
+    std::vector<std::vector<double>> initial_values_y_per_phase(num_metric_phases, std::vector<double>(NUM_DRONES));
+    std::vector<std::vector<double>> target_values_x_per_phase(num_metric_phases, std::vector<double>(NUM_DRONES));
+    std::vector<std::vector<double>> target_values_y_per_phase(num_metric_phases, std::vector<double>(NUM_DRONES));
+    std::vector<std::vector<bool>> in_settling_band_x(num_metric_phases, std::vector<bool>(NUM_DRONES, false));
+    std::vector<std::vector<bool>> in_settling_band_y(num_metric_phases, std::vector<bool>(NUM_DRONES, false));
+    std::vector<std::vector<double>> time_entered_settling_x(num_metric_phases, std::vector<double>(NUM_DRONES, -1.0));
+    std::vector<std::vector<double>> time_entered_settling_y(num_metric_phases, std::vector<double>(NUM_DRONES, -1.0));
     const double SETTLING_PERCENTAGE = 0.02;
-    // --- End Metric Storage ---
+
+    // Example: Store target values for different phases
+    std::vector<double> phase_target_center_x = {5.0, -5.0, 0.0, 5.0};  // Center X for phase 1, 2, 3, 4
+    std::vector<double> phase_target_center_y = {5.0,  0.0, -5.0, 0.0}; // Center Y for phase 1, 2, 3, 4
 
     // Initialize drones, PIDs, FLSs, and initial metrics
     for (int i = 0; i < NUM_DRONES; ++i) {
@@ -161,10 +172,10 @@ int main() {
         setup_fls_instance(fls_y_controllers[i]); // Using same MFs/Rules for Y-axis FLS for now
         // *** END SETUP FLS ***
 
-        initial_values_x_phase1[i] = drones[i].position_x;
-        initial_values_y_phase1[i] = drones[i].position_y;
-        drone_metrics_x[i][0].reset(initial_values_x_phase1[i]);
-        drone_metrics_y[i][0].reset(initial_values_y_phase1[i]);
+        initial_values_x_per_phase[0][i] = drones[i].position_x;
+        initial_values_y_per_phase[0][i] = drones[i].position_y;
+        drone_metrics_x[i][0].reset(initial_values_x_per_phase[0][i]);
+        drone_metrics_y[i][0].reset(initial_values_y_per_phase[0][i]);
     }
 
     // Define Formation (same as before)
@@ -177,16 +188,16 @@ int main() {
     formation_offsets[2] = {side_length / 2.0, -(sqrt(3.0) / 2.0) * side_length * (1.0/3.0)};
 
     for (int i = 0; i < NUM_DRONES; ++i) {
-        target_values_x_phase1[i] = formation_center_x + formation_offsets[i].first;
-        target_values_y_phase1[i] = formation_center_y + formation_offsets[i].second;
-        pid_x_controllers[i].setSetpoint(target_values_x_phase1[i]);
-        pid_y_controllers[i].setSetpoint(target_values_y_phase1[i]);
+        target_values_x_per_phase[0][i] = formation_center_x + formation_offsets[i].first;
+        target_values_y_per_phase[0][i] = formation_center_y + formation_offsets[i].second;
+        pid_x_controllers[i].setSetpoint(target_values_x_per_phase[0][i]);
+        pid_y_controllers[i].setSetpoint(target_values_y_per_phase[0][i]);
     }
 
     double dt = 0.05;
-    double simulation_time = 60.0; // Extended simulation time
+    double simulation_time = 120.0; // Extended simulation time for more phases
 
-    // *** Simulated Wind Conditions ***
+    // --- Simulated Wind Conditions ***
     double simulated_wind_x = 0.0;
     double simulated_wind_y = 0.0;
     // *** End Wind ***
@@ -216,43 +227,158 @@ int main() {
 
     // --- Simulation Loop ---
     for (double time_now = 0.0; time_now <= simulation_time; time_now += dt) {
-        // --- Apply Wind Disturbances (Example Profile) ---
-        if (time_now >= 5.0 && time_now < 15.0) {
-            simulated_wind_x = 3.0;
-        } else if (time_now >= 35.0 && time_now < 45.0) { // Second wind phase for X
-            simulated_wind_x = -2.0;
-        } else {
-            simulated_wind_x = 0.0;
+        // --- Apply Wind Disturbances (Enhanced Profile) ---
+        // Reset wind at the start of each iteration
+        simulated_wind_x = 0.0;
+        simulated_wind_y = 0.0;
+
+        // Phase 1 Winds (5-20s)
+        if (current_phase == 1) {
+            if (time_now >= 5.0 && time_now < 15.0) simulated_wind_x = 3.0;
+            if (time_now >= 10.0 && time_now < 20.0) simulated_wind_y = -1.0;
+        }
+        // Phase 2 Winds (35-50s)
+        else if (current_phase == 2) {
+            if (time_now >= 35.0 && time_now < 45.0) simulated_wind_x = -2.0;
+            if (time_now >= 40.0 && time_now < 50.0) simulated_wind_y = 1.5;
+        }
+        // Phase 3 Winds (65-75s) - Oscillating and gusty winds
+        else if (current_phase == 3) {
+            if (time_now >= 65.0 && time_now < 70.0) {
+                simulated_wind_x = 1.0 * sin(time_now * 2.0); // Oscillating X wind
+            }
+            if (time_now >= 70.0 && time_now < 72.0) {
+                simulated_wind_y = 4.0;  // Strong Y gust
+            } else if (time_now >= 72.0 && time_now < 75.0) {
+                simulated_wind_y = -2.0; // Reverse Y gust
+            }
+        }
+        // Phase 4 Winds (95-105s) - Simultaneous strong X and Y
+        else if (current_phase == 4) {
+            if (time_now >= 95.0 && time_now < 105.0) {
+                simulated_wind_x = 2.5;
+                simulated_wind_y = -2.5;
+            }
         }
 
-        if (time_now >= 10.0 && time_now < 20.0) {
-            simulated_wind_y = -1.0;
-        } else if (time_now >= 40.0 && time_now < 50.0) { // Second wind phase for Y
-            simulated_wind_y = 1.5;
-        } else {
-            simulated_wind_y = 0.0;
-        }
-        // --- End Wind Disturbances ---
+        // --- Phase Transitions and Target Changes ---
+        // Phase 1 to 2 Transition (30s)
+        if (time_now > 29.9 && current_phase == 1 && !phase_triggered[2]) {
+            std::cout << "---- Changing to PHASE 2: Target Center ("
+                      << phase_target_center_x[1] << ", " << phase_target_center_y[1] << ") ----\n";
+            current_phase = 2;
+            phase_triggered[2] = true;
 
-        // Target change (around 30s)
-        if (time_now > 29.9 && time_now < 30.1 && !phase2_active) {
-            std::cout << "---- Changing FORMATION CENTER to (-5.0, 0.0) ----\n";
-            formation_center_x = -5.0;
-            formation_center_y = 0.0;
-            phase2_active = true;
+            formation_center_x = phase_target_center_x[current_phase - 1];
+            formation_center_y = phase_target_center_y[current_phase - 1];
+
+            int metric_idx = current_phase - 1; // metric_idx = 1 for phase 2
+
             for (int i = 0; i < NUM_DRONES; ++i) {
-                target_values_x_phase2[i] = formation_center_x + formation_offsets[i].first;
-                target_values_y_phase2[i] = formation_center_y + formation_offsets[i].second;
-                pid_x_controllers[i].setSetpoint(target_values_x_phase2[i]);
-                pid_y_controllers[i].setSetpoint(target_values_y_phase2[i]);
+                // Store initial positions for this phase
+                initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
+                initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
 
-                initial_values_x_phase2[i] = drones[i].position_x;
-                initial_values_y_phase2[i] = drones[i].position_y;
-                drone_metrics_x[i][1].reset(initial_values_x_phase2[i]);
-                drone_metrics_y[i][1].reset(initial_values_y_phase2[i]);
-                in_settling_band_x_phase2[i] = false; time_entered_settling_x_phase2[i] = -1.0;
-                in_settling_band_y_phase2[i] = false; time_entered_settling_y_phase2[i] = -1.0;
-                drones[i].prev_error_x = 0.0; // Reset dError history for new phase
+                // Calculate and store new target positions for this phase
+                target_values_x_per_phase[metric_idx][i] = formation_center_x + formation_offsets[i].first;
+                target_values_y_per_phase[metric_idx][i] = formation_center_y + formation_offsets[i].second;
+
+                // Update PID setpoints
+                pid_x_controllers[i].setSetpoint(target_values_x_per_phase[metric_idx][i]);
+                pid_y_controllers[i].setSetpoint(target_values_y_per_phase[metric_idx][i]);
+
+                // Reset metrics for this new phase
+                drone_metrics_x[i][metric_idx].reset(initial_values_x_per_phase[metric_idx][i]);
+                drone_metrics_y[i][metric_idx].reset(initial_values_y_per_phase[metric_idx][i]);
+
+                // Reset settling band trackers
+                in_settling_band_x[metric_idx][i] = false;
+                in_settling_band_y[metric_idx][i] = false;
+                time_entered_settling_x[metric_idx][i] = -1.0;
+                time_entered_settling_y[metric_idx][i] = -1.0;
+
+                // Reset error history
+                drones[i].prev_error_x = 0.0;
+                drones[i].prev_error_y = 0.0;
+            }
+        }
+        // Phase 2 to 3 Transition (60s)
+        else if (time_now > 59.9 && current_phase == 2 && !phase_triggered[3]) {
+            std::cout << "---- Changing to PHASE 3: Target Center ("
+                      << phase_target_center_x[2] << ", " << phase_target_center_y[2] << ") ----\n";
+            current_phase = 3;
+            phase_triggered[3] = true;
+
+            formation_center_x = phase_target_center_x[current_phase - 1];
+            formation_center_y = phase_target_center_y[current_phase - 1];
+
+            int metric_idx = current_phase - 1; // metric_idx = 2 for phase 3
+
+            for (int i = 0; i < NUM_DRONES; ++i) {
+                // Store initial positions for this phase
+                initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
+                initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
+
+                // Calculate and store new target positions for this phase
+                target_values_x_per_phase[metric_idx][i] = formation_center_x + formation_offsets[i].first;
+                target_values_y_per_phase[metric_idx][i] = formation_center_y + formation_offsets[i].second;
+
+                // Update PID setpoints
+                pid_x_controllers[i].setSetpoint(target_values_x_per_phase[metric_idx][i]);
+                pid_y_controllers[i].setSetpoint(target_values_y_per_phase[metric_idx][i]);
+
+                // Reset metrics for this new phase
+                drone_metrics_x[i][metric_idx].reset(initial_values_x_per_phase[metric_idx][i]);
+                drone_metrics_y[i][metric_idx].reset(initial_values_y_per_phase[metric_idx][i]);
+
+                // Reset settling band trackers
+                in_settling_band_x[metric_idx][i] = false;
+                in_settling_band_y[metric_idx][i] = false;
+                time_entered_settling_x[metric_idx][i] = -1.0;
+                time_entered_settling_y[metric_idx][i] = -1.0;
+
+                // Reset error history
+                drones[i].prev_error_x = 0.0;
+                drones[i].prev_error_y = 0.0;
+            }
+        }
+        // Phase 3 to 4 Transition (90s)
+        else if (time_now > 89.9 && current_phase == 3 && !phase_triggered[4]) {
+            std::cout << "---- Changing to PHASE 4: Target Center ("
+                      << phase_target_center_x[3] << ", " << phase_target_center_y[3] << ") ----\n";
+            current_phase = 4;
+            phase_triggered[4] = true;
+
+            formation_center_x = phase_target_center_x[current_phase - 1];
+            formation_center_y = phase_target_center_y[current_phase - 1];
+
+            int metric_idx = current_phase - 1; // metric_idx = 3 for phase 4
+
+            for (int i = 0; i < NUM_DRONES; ++i) {
+                // Store initial positions for this phase
+                initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
+                initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
+
+                // Calculate and store new target positions for this phase
+                target_values_x_per_phase[metric_idx][i] = formation_center_x + formation_offsets[i].first;
+                target_values_y_per_phase[metric_idx][i] = formation_center_y + formation_offsets[i].second;
+
+                // Update PID setpoints
+                pid_x_controllers[i].setSetpoint(target_values_x_per_phase[metric_idx][i]);
+                pid_y_controllers[i].setSetpoint(target_values_y_per_phase[metric_idx][i]);
+
+                // Reset metrics for this new phase
+                drone_metrics_x[i][metric_idx].reset(initial_values_x_per_phase[metric_idx][i]);
+                drone_metrics_y[i][metric_idx].reset(initial_values_y_per_phase[metric_idx][i]);
+
+                // Reset settling band trackers
+                in_settling_band_x[metric_idx][i] = false;
+                in_settling_band_y[metric_idx][i] = false;
+                time_entered_settling_x[metric_idx][i] = -1.0;
+                time_entered_settling_y[metric_idx][i] = -1.0;
+
+                // Reset error history
+                drones[i].prev_error_x = 0.0;
                 drones[i].prev_error_y = 0.0;
             }
         }
@@ -288,38 +414,76 @@ int main() {
             drones[i].prev_error_x = error_x;
             drones[i].prev_error_y = error_y;
 
-            // --- Update Metrics (same logic as your working version) ---
-            int phase_idx = phase2_active ? 1 : 0;
-            // (Copy your working metric update logic here for X and Y, for drone_metrics_x[i][phase_idx] and drone_metrics_y[i][phase_idx])
-            // For X-axis
-            double current_target_x = phase2_active ? target_values_x_phase2[i] : target_values_x_phase1[i];
-            double initial_val_x    = phase2_active ? initial_values_x_phase2[i] : initial_values_x_phase1[i];
-            PerformanceMetrics& current_drone_metric_x = drone_metrics_x[i][phase_idx];
-            if (current_target_x > initial_val_x) { if (drones[i].position_x > current_drone_metric_x.peak_value) { current_drone_metric_x.peak_value = drones[i].position_x; current_drone_metric_x.peak_time = time_now; }}
-            else { if (drones[i].position_x < current_drone_metric_x.peak_value) { current_drone_metric_x.peak_value = drones[i].position_x; current_drone_metric_x.peak_time = time_now; }}
-            double settling_tol_x = std::abs(current_target_x * SETTLING_PERCENTAGE);
-            std::vector<bool>& current_in_band_vec_x_ref = phase2_active ? in_settling_band_x_phase2 : in_settling_band_x_phase1;
-            std::vector<double>& current_time_entered_vec_x_ref = phase2_active ? time_entered_settling_x_phase2 : time_entered_settling_x_phase1;
-            if (std::abs(drones[i].position_x - current_target_x) <= settling_tol_x) {
-                if (!current_in_band_vec_x_ref[i]) { current_time_entered_vec_x_ref[i] = time_now; current_in_band_vec_x_ref[i] = true; }
-                if (current_drone_metric_x.settling_time_2percent < 0 && current_in_band_vec_x_ref[i]) { current_drone_metric_x.settling_time_2percent = current_time_entered_vec_x_ref[i]; }
+            // --- Update Metrics ---
+            int metric_idx = current_phase - 1;
+            PerformanceMetrics& current_drone_metric_x = drone_metrics_x[i][metric_idx];
+            PerformanceMetrics& current_drone_metric_y = drone_metrics_y[i][metric_idx];
+            
+            // Get current target and initial values for this phase
+            double current_target_x = target_values_x_per_phase[metric_idx][i];
+            double current_target_y = target_values_y_per_phase[metric_idx][i];
+            double initial_val_x = initial_values_x_per_phase[metric_idx][i];
+            double initial_val_y = initial_values_y_per_phase[metric_idx][i];
+
+            // Update peak values and times
+            if (current_target_x > initial_val_x) {
+                if (drones[i].position_x > current_drone_metric_x.peak_value) {
+                    current_drone_metric_x.peak_value = drones[i].position_x;
+                    current_drone_metric_x.peak_time = time_now;
+                }
             } else {
-                if (current_in_band_vec_x_ref[i]) { current_drone_metric_x.settling_time_2percent = -1.0; } current_in_band_vec_x_ref[i] = false;
+                if (drones[i].position_x < current_drone_metric_x.peak_value) {
+                    current_drone_metric_x.peak_value = drones[i].position_x;
+                    current_drone_metric_x.peak_time = time_now;
+                }
             }
-            // For Y-axis
-            double current_target_y = phase2_active ? target_values_y_phase2[i] : target_values_y_phase1[i];
-            double initial_val_y    = phase2_active ? initial_values_y_phase2[i] : initial_values_y_phase1[i];
-            PerformanceMetrics& current_drone_metric_y = drone_metrics_y[i][phase_idx];
-            std::vector<bool>& current_in_band_vec_y_ref = phase2_active ? in_settling_band_y_phase2 : in_settling_band_y_phase1;
-            std::vector<double>& current_time_entered_vec_y_ref = phase2_active ? time_entered_settling_y_phase2 : time_entered_settling_y_phase1;
-            if (current_target_y > initial_val_y) { if (drones[i].position_y > current_drone_metric_y.peak_value) { current_drone_metric_y.peak_value = drones[i].position_y; current_drone_metric_y.peak_time = time_now; }}
-            else { if (drones[i].position_y < current_drone_metric_y.peak_value) { current_drone_metric_y.peak_value = drones[i].position_y; current_drone_metric_y.peak_time = time_now; }}
-            double settling_tol_y = std::abs(current_target_y * SETTLING_PERCENTAGE);
-            if (std::abs(drones[i].position_y - current_target_y) <= settling_tol_y) {
-                if (!current_in_band_vec_y_ref[i]) { current_time_entered_vec_y_ref[i] = time_now; current_in_band_vec_y_ref[i] = true; }
-                 if (current_drone_metric_y.settling_time_2percent < 0 && current_in_band_vec_y_ref[i]) { current_drone_metric_y.settling_time_2percent = current_time_entered_vec_y_ref[i]; }
+
+            if (current_target_y > initial_val_y) {
+                if (drones[i].position_y > current_drone_metric_y.peak_value) {
+                    current_drone_metric_y.peak_value = drones[i].position_y;
+                    current_drone_metric_y.peak_time = time_now;
+                }
             } else {
-                 if (current_in_band_vec_y_ref[i]) { current_drone_metric_y.settling_time_2percent = -1.0; } current_in_band_vec_y_ref[i] = false;
+                if (drones[i].position_y < current_drone_metric_y.peak_value) {
+                    current_drone_metric_y.peak_value = drones[i].position_y;
+                    current_drone_metric_y.peak_time = time_now;
+                }
+            }
+
+            // Check settling (2% criterion)
+            double settling_tol_x = std::abs(current_target_x * SETTLING_PERCENTAGE);
+            double settling_tol_y = std::abs(current_target_y * SETTLING_PERCENTAGE);
+
+            // For X-axis
+            if (std::abs(drones[i].position_x - current_target_x) <= settling_tol_x) {
+                if (!in_settling_band_x[metric_idx][i]) {
+                    time_entered_settling_x[metric_idx][i] = time_now;
+                    in_settling_band_x[metric_idx][i] = true;
+                }
+                if (current_drone_metric_x.settling_time_2percent < 0 && in_settling_band_x[metric_idx][i]) {
+                    current_drone_metric_x.settling_time_2percent = time_entered_settling_x[metric_idx][i];
+                }
+            } else {
+                if (in_settling_band_x[metric_idx][i]) {
+                    current_drone_metric_x.settling_time_2percent = -1.0;
+                }
+                in_settling_band_x[metric_idx][i] = false;
+            }
+
+            // For Y-axis
+            if (std::abs(drones[i].position_y - current_target_y) <= settling_tol_y) {
+                if (!in_settling_band_y[metric_idx][i]) {
+                    time_entered_settling_y[metric_idx][i] = time_now;
+                    in_settling_band_y[metric_idx][i] = true;
+                }
+                if (current_drone_metric_y.settling_time_2percent < 0 && in_settling_band_y[metric_idx][i]) {
+                    current_drone_metric_y.settling_time_2percent = time_entered_settling_y[metric_idx][i];
+                }
+            } else {
+                if (in_settling_band_y[metric_idx][i]) {
+                    current_drone_metric_y.settling_time_2percent = -1.0;
+                }
+                in_settling_band_y[metric_idx][i] = false;
             }
             // --- End Update Metrics ---
 
@@ -343,72 +507,70 @@ int main() {
         // Add wind data to CSV once per time step, at the end of the row
         csv_file << "," << simulated_wind_x << "," << simulated_wind_y;
         csv_file << "\n";
-
     } // End simulation loop
 
-    // ... (CSV close, Metrics file open, Final Metric Calculation & Printing as before) ...
-    // (This part of your code should mostly work, just ensure filenames and variables are consistent)
-    csv_file.close();
-    std::cout << "\nSimulation data written to " << csv_file_name << std::endl;
-
-    std::ofstream metrics_file("pid_fls_performance_metrics.txt");
+    // --- Final Metric Calculation & Printing ---
+    std::cout << "\n=== FINAL PERFORMANCE METRICS ===\n";
+    std::ofstream metrics_file("performance_metrics.txt");
     if (!metrics_file.is_open()) {
-        std::cerr << "Error opening metrics file!" << std::endl;
-    } else {
-        metrics_file << std::fixed << std::setprecision(3);
-        metrics_file << "PID+FLS Performance Metrics (Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << ")\n";
-        metrics_file << "=======================================================================\n";
+        std::cerr << "Warning: Could not open metrics file. Printing to console only.\n";
     }
 
-    for (int phase_idx = 0; phase_idx < 2; ++phase_idx) {
-        if (phase_idx == 1 && !phase2_active && simulation_time < 30.1) continue; // Adjusted target change time
-        // ... (The rest of your metric calculation and printing logic, ensure variable names match) ...
+    for (int phase_idx = 0; phase_idx < num_metric_phases; ++phase_idx) {
+        if (!phase_triggered[phase_idx + 1]) continue; // Skip phases that weren't triggered
+
         std::cout << "\n--- METRICS FOR PHASE " << phase_idx + 1 << " ---" << std::endl;
         if (metrics_file.is_open()) metrics_file << "\n--- METRICS FOR PHASE " << phase_idx + 1 << " ---\n";
+
         for (int i = 0; i < NUM_DRONES; ++i) {
-            double initial_x = (phase_idx == 0) ? initial_values_x_phase1[i] : initial_values_x_phase2[i];
-            double target_x  = (phase_idx == 0) ? target_values_x_phase1[i] : target_values_x_phase2[i];
-            double initial_y = (phase_idx == 0) ? initial_values_y_phase1[i] : initial_values_y_phase2[i];
-            double target_y  = (phase_idx == 0) ? target_values_y_phase1[i] : target_values_y_phase2[i];
+            double initial_x = initial_values_x_per_phase[phase_idx][i];
+            double target_x = target_values_x_per_phase[phase_idx][i];
+            double initial_y = initial_values_y_per_phase[phase_idx][i];
+            double target_y = target_values_y_per_phase[phase_idx][i];
 
             PerformanceMetrics& mets_x = drone_metrics_x[i][phase_idx];
             PerformanceMetrics& mets_y = drone_metrics_y[i][phase_idx];
 
-            double step_mag_x = std::abs(target_x - initial_x);
-            if (step_mag_x > 1e-6) { mets_x.overshoot_percent = (target_x > initial_x) ? ((mets_x.peak_value - target_x) / step_mag_x) * 100.0 : ((target_x - mets_x.peak_value) / step_mag_x) * 100.0;
-                if ((target_x > initial_x && mets_x.peak_value < target_x) || (target_x < initial_x && mets_x.peak_value > target_x) || mets_x.overshoot_percent < 0) { mets_x.overshoot_percent = 0.0; }
-            } else { mets_x.overshoot_percent = 0.0; }
-            double step_mag_y = std::abs(target_y - initial_y);
-            if (step_mag_y > 1e-6) { mets_y.overshoot_percent = (target_y > initial_y) ? ((mets_y.peak_value - target_y) / step_mag_y) * 100.0 : ((target_y - mets_y.peak_value) / step_mag_y) * 100.0;
-                if ((target_y > initial_y && mets_y.peak_value < target_y) || (target_y < initial_y && mets_y.peak_value > target_y) || mets_y.overshoot_percent < 0) { mets_y.overshoot_percent = 0.0; }
-            } else { mets_y.overshoot_percent = 0.0; }
-            
-            std::string x_settling_str = (mets_x.settling_time_2percent >=0 ? std::to_string(mets_x.settling_time_2percent) + "s" : "Not Settled");
-            std::string y_settling_str = (mets_y.settling_time_2percent >=0 ? std::to_string(mets_y.settling_time_2percent) + "s" : "Not Settled");
-
-            std::cout << "\n  --- Drone " << i << " (Phase " << phase_idx + 1 << ") ---" << std::endl;
-            std::cout << "    X-Axis (Target: " << target_x << " from " << initial_x << "):" << std::endl;
-            std::cout << "      Peak: " << mets_x.peak_value << " at T=" << mets_x.peak_time << "s, Overshoot: " << mets_x.overshoot_percent << "%" << std::endl;
-            std::cout << "      Settling Time (2%): " << x_settling_str << std::endl;
-            std::cout << "    Y-Axis (Target: " << target_y << " from " << initial_y << "):" << std::endl;
-            std::cout << "      Peak: " << mets_y.peak_value << " at T=" << mets_y.peak_time << "s, Overshoot: " << mets_y.overshoot_percent << "%" << std::endl;
-            std::cout << "      Settling Time (2%): " << y_settling_str << std::endl;
-
-            if (metrics_file.is_open()) {
-                metrics_file << "\n  --- Drone " << i << " (Phase " << phase_idx + 1 << ") ---\n";
-                metrics_file << "    X-Axis (Target: " << target_x << " from " << initial_x << "):\n";
-                metrics_file << "      Peak: " << mets_x.peak_value << " at T=" << mets_x.peak_time << "s, Overshoot: " << mets_x.overshoot_percent << "%\n";
-                metrics_file << "      Settling Time (2%): " << x_settling_str << "\n";
-                metrics_file << "    Y-Axis (Target: " << target_y << " from " << initial_y << "):\n";
-                metrics_file << "      Peak: " << mets_y.peak_value << " at T=" << mets_y.peak_time << "s, Overshoot: " << mets_y.overshoot_percent << "%\n";
-                metrics_file << "      Settling Time (2%): " << y_settling_str << "\n";
+            // Calculate overshoot percentage if peak exists
+            if (target_x > initial_x) {
+                mets_x.overshoot_percent = ((mets_x.peak_value - target_x) / (target_x - initial_x)) * 100.0;
+            } else if (target_x < initial_x) {
+                mets_x.overshoot_percent = ((target_x - mets_x.peak_value) / (initial_x - target_x)) * 100.0;
             }
+
+            if (target_y > initial_y) {
+                mets_y.overshoot_percent = ((mets_y.peak_value - target_y) / (target_y - initial_y)) * 100.0;
+            } else if (target_y < initial_y) {
+                mets_y.overshoot_percent = ((target_y - mets_y.peak_value) / (initial_y - target_y)) * 100.0;
+            }
+
+            // Get settling times from tracking variables
+            mets_x.settling_time_2percent = time_entered_settling_x[phase_idx][i];
+            mets_y.settling_time_2percent = time_entered_settling_y[phase_idx][i];
+
+            // Print metrics for this drone
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(3)
+               << "Drone " << i << " Metrics:\n"
+               << "  X-axis:\n"
+               << "    Peak Value: " << mets_x.peak_value << " at t=" << mets_x.peak_time << "s\n"
+               << "    Overshoot: " << mets_x.overshoot_percent << "%\n"
+               << "    Settling Time (2%): " << (mets_x.settling_time_2percent >= 0 ? 
+                    std::to_string(mets_x.settling_time_2percent) + "s" : "Did not settle") << "\n"
+               << "  Y-axis:\n"
+               << "    Peak Value: " << mets_y.peak_value << " at t=" << mets_y.peak_time << "s\n"
+               << "    Overshoot: " << mets_y.overshoot_percent << "%\n"
+               << "    Settling Time (2%): " << (mets_y.settling_time_2percent >= 0 ? 
+                    std::to_string(mets_y.settling_time_2percent) + "s" : "Did not settle") << "\n";
+
+            std::cout << ss.str();
+            if (metrics_file.is_open()) metrics_file << ss.str();
         }
     }
 
-    if (metrics_file.is_open()) {
-        metrics_file.close();
-        std::cout << "\nPerformance metrics also written to pid_fls_performance_metrics.txt" << std::endl;
-    }
+    if (metrics_file.is_open()) metrics_file.close();
+    csv_file.close();
+
+    std::cout << "\nSimulation complete. Data written to " << csv_file_name << std::endl;
     return 0;
 }
