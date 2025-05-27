@@ -9,17 +9,17 @@
 ### ⚙️ Step 1.1: Prepare for Ziegler-Nichols (Z-N) Ultimate Sensitivity Tuning
 - **Code Modifications (`agent_control_main.cpp`):**
     - [X] Implement `ZN_TUNING_ACTIVE` boolean flag (e.g., `const bool ZN_TUNING_ACTIVE = true;`).
-    - [ ] Implement `ZN_KP_TEST_VALUE` constant (e.g., `const double ZN_KP_TEST_VALUE = 0.1;`).
-    - [ ] **Conditional PID Initialization:**
-        - [ ] If `ZN_TUNING_ACTIVE == true`:
-            - [ ] Initialize ALL PID controllers (all drones, X and Y axes) with `kp = ZN_KP_TEST_VALUE`, `ki = 0.0`, `kd = 0.0`.
-            - [ ] Ensure FLS is effectively disabled (e.g., `current_run_uses_fls` flag set to `false`).
-    - [ ] **File Naming for Z-N Iterations:**
-        - [ ] Modify CSV output filename to be unique for each Z-N test run, incorporating `ZN_KP_TEST_VALUE` (e.g., `multi_drone_zn_test_kp0.100.csv`).
-        - [ ] Modify metrics output filename similarly (e.g., `metrics_zn_test_kp0.100.txt`).
-    - [ ] **Simulation Settings for Z-N Test:**
-        - [ ] Ensure `simulation_time` is sufficient to observe sustained oscillations (e.g., 30-60s might be enough, focusing on the response to the first setpoint change in Phase 1).
-        - [ ] Wind disturbances should ideally be OFF or minimal during the Ku/Pu finding phase to get a clean system response. If wind *must* be on for the setpoint change to occur as desired, note its presence. *(Self-correction: For finding Ku/Pu, it's best to have a clean step response without other disturbances if possible. Your Phase 1 has a wind starting at t=5s. Consider if you can delay this wind or use a simpler setpoint change for Z-N if the wind interferes with observing pure P-controller oscillations).*
+    - [X] Implement `ZN_KP_TEST_VALUE` constant (e.g., `const double ZN_KP_TEST_VALUE = 0.1;`).
+    - [x] **Conditional PID Initialization:**
+        - [x] If `ZN_TUNING_ACTIVE == true`:
+            - [x] Initialize ALL PID controllers (all drones, X and Y axes) with `kp = ZN_KP_TEST_VALUE`, `ki = 0.0`, `kd = 0.0`.
+            - [x] Ensure FLS is effectively disabled (e.g., `current_run_uses_fls` flag set to `false`).
+    - [x] **File Naming for Z-N Iterations:**
+        - [x] Modify CSV output filename to be unique for each Z-N test run, incorporating `ZN_KP_TEST_VALUE` (e.g., `multi_drone_zn_test_kp0.100.csv`).
+        - [x] Modify metrics output filename similarly (e.g., `metrics_zn_test_kp0.100.txt`).
+    - [x] **Simulation Settings for Z-N Test:**
+        - [x] Ensure `simulation_time` is sufficient to observe sustained oscillations (e.g., 30-60s might be enough, focusing on the response to the first setpoint change in Phase 1).
+        - [x] Wind disturbances should ideally be OFF or minimal during the Ku/Pu finding phase to get a clean system response. If wind *must* be on for the setpoint change to occur as desired, note its presence. *(Self-correction: For finding Ku/Pu, it's best to have a clean step response without other disturbances if possible. Your Phase 1 has a wind starting at t=5s. Consider if you can delay this wind or use a simpler setpoint change for Z-N if the wind interferes with observing pure P-controller oscillations).*
 
 ### 🔍 Step 1.2: Iteratively Find Ultimate Gain (`Ku`) and Ultimate Period (`Pu`)
 - **Focus:** Drone 0, X-axis response to the first major setpoint change (e.g., initial position to Phase 1 target).
