@@ -8,7 +8,7 @@
 
 ### ⚙️ Step 1.1: Prepare for Ziegler-Nichols (Z-N) Ultimate Sensitivity Tuning
 - **Code Modifications (`agent_control_main.cpp`):**
-    - [ ] Implement `ZN_TUNING_ACTIVE` boolean flag (e.g., `const bool ZN_TUNING_ACTIVE = true;`).
+    - [X] Implement `ZN_TUNING_ACTIVE` boolean flag (e.g., `const bool ZN_TUNING_ACTIVE = true;`).
     - [ ] Implement `ZN_KP_TEST_VALUE` constant (e.g., `const double ZN_KP_TEST_VALUE = 0.1;`).
     - [ ] **Conditional PID Initialization:**
         - [ ] If `ZN_TUNING_ACTIVE == true`:
