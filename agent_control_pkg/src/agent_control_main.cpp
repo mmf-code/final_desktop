@@ -376,13 +376,6 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
         pid_x_controllers[i].setSetpoint(target_values_x_per_phase[0][i]);
         pid_y_controllers[i].setSetpoint(target_values_y_per_phase[0][i]);
 
-        // *** SETUP FLS INSTANCES ***
-        if (USE_FLS) { // This check correctly uses the effective USE_FLS flag
-            applyFuzzyParams(fls_x_controllers[i], fls_cfg);
-            applyFuzzyParams(fls_y_controllers[i], fls_cfg); // Using same MFs/Rules for Y-axis FLS for now
-        }
-        // *** END SETUP FLS ***
-
         initial_values_x_per_phase[0][i] = drones[i].position_x;
         initial_values_y_per_phase[0][i] = drones[i].position_y;
         drone_metrics_x[i][0].reset(initial_values_x_per_phase[0][i]);
