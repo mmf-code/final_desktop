@@ -7,7 +7,7 @@ namespace agent_control_pkg
 class PIDController
 {
 public:
-    // Structure to store individual PID terms
+    // Holds the breakdown of P, I, D and total output
     struct PIDTerms {
         double p;
         double i;
@@ -18,48 +18,50 @@ public:
     // Constructor
     PIDController(double kp, double ki, double kd, double output_min, double output_max, double setpoint = 0.0);
 
-    // Setters
+    // Update gains, output limits, or target
     void setTunings(double kp, double ki, double kd);
     void setOutputLimits(double min, double max);
     void setSetpoint(double setpoint);
 
-    // Getters
+    // Access current PID settings
     double getKp() const;
     double getKi() const;
     double getKd() const;
     double getSetpoint() const;
 
-    // Core PID calculation
+    // Basic PID computation (returns control output)
     double calculate(double current_value, double dt);
-    PIDTerms calculate_with_terms(double current_value, double dt); // Extended version
+    
+    // Version that also returns the breakdown of P/I/D
+    PIDTerms calculate_with_terms(double current_value, double dt);
 
-    // Access last calculated terms
+    // Retrieve last computed PID components
     PIDTerms getLastTerms() const;
 
-    // Reset internal states
+    // Reset integrator and internal state
     void reset();
 
 private:
-    // Gains
+    // PID gains
     double kp_;
     double ki_;
     double kd_;
 
-    // Output limits
+    // Output range
     double output_min_;
     double output_max_;
 
     // Target value
     double setpoint_;
 
-    // Internal state
+    // Internal memory
     double previous_error_;
     double integral_;
-    bool first_calculation_; // true on first call
+    bool first_calculation_;
 
-    double previous_measurement_;
+    double previous_measurement_;  // optional, used if needed
 
-    // Last PID components
+    // Last PID terms (for logging/debug/analysis)
     PIDTerms last_terms_;
 };
 
