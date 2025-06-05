@@ -164,7 +164,7 @@ int main() {
     } else {
         // Z-N derived PID gains (from your tuning process)
         kp = 2.10;  // Z-N calculated value
-        ki = 1.26;  // Z-N calculated value
+        ki = 1.261;  // Z-N calculated value
         kd = 0.87;  // Z-N calculated value
         std::cout << "Running with Z-N derived PID gains:" << std::endl;
         std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
