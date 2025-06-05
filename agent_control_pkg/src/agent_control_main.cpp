@@ -129,7 +129,17 @@ void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
 // *** END Added Helper Function ***
 
 
-int main() {
+int main(int argc, char** argv) {
+    bool use_fls_flag = false;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--use-fls" || arg == "--enable-fls") {
+            use_fls_flag = true;
+        } else if (arg == "--help" || arg == "-h") {
+            std::cout << "Usage: " << argv[0] << " [--use-fls]" << std::endl;
+            return 0;
+        }
+    }
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
     const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
                                          // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
@@ -140,7 +150,7 @@ int main() {
     // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
 
     // Flag to control FLS usage
-    const bool USE_FLS = !ZN_TUNING_ACTIVE && false; // Set to false for PID-only run with Z-N gains
+    const bool USE_FLS = !ZN_TUNING_ACTIVE && use_fls_flag;
 
     const int NUM_DRONES = 3;
     std::vector<FakeDrone> drones(NUM_DRONES);
