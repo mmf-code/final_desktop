@@ -91,6 +91,21 @@ target_link_libraries(test_pid_controller PRIVATE
 # Discover tests automatically
 gtest_discover_tests(test_pid_controller)
 
+# --- FLS Unit Tests ---
+add_executable(test_gt2_fls
+    test/test_gt2_fls.cpp
+)
+target_include_directories(test_gt2_fls PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(test_gt2_fls PRIVATE
+    fuzzy_logic_lib
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(test_gt2_fls)
+
 # Optional: Install rules
 # install(TARGETS pid_standalone_tester fuzzy_standalone_tester DESTINATION bin)
 # install(TARGETS pid_logic_lib fuzzy_logic_lib
