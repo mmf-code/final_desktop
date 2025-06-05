@@ -11,6 +11,163 @@
 #include <string>    // For std::to_string
 #include <algorithm> // For std::clamp
 #include <sstream>   // For std::stringstream
+#include <cctype>    // For std::isspace
+#include <filesystem>
+#include <map>
+#include <array>
+
+// ------------------------------------------------------------
+// Utility helpers for loading simple YAML parameters
+// ------------------------------------------------------------
+
+struct PIDParams {
+    double kp{0.0};
+    double ki{0.0};
+    double kd{0.0};
+    double output_min{-10.0};
+    double output_max{10.0};
+};
+
+struct FuzzySetFOU {
+    double l1, l2, l3, u1, u2, u3;
+};
+
+struct FuzzyParams {
+    std::map<std::string, std::map<std::string, FuzzySetFOU>> sets;
+    std::vector<std::array<std::string,4>> rules;
+};
+
+static std::string trim(const std::string& s) {
+    size_t start = s.find_first_not_of(" \t\r\n");
+    size_t end = s.find_last_not_of(" \t\r\n");
+    if(start==std::string::npos) return "";
+    return s.substr(start, end-start+1);
+}
+
+static std::vector<double> parseNumberList(const std::string& in) {
+    std::vector<double> values;
+    std::stringstream ss(in);
+    std::string tok;
+    while(std::getline(ss, tok, ',')) {
+        tok = trim(tok);
+        if(!tok.empty()) values.push_back(std::stod(tok));
+    }
+    return values;
+}
+
+static std::vector<std::string> parseStringList(const std::string& in) {
+    std::vector<std::string> values;
+    std::stringstream ss(in);
+    std::string tok;
+    while(std::getline(ss, tok, ',')) {
+        values.push_back(trim(tok));
+    }
+    return values;
+}
+
+static std::string findConfigFile(const std::string& filename) {
+    std::vector<std::string> candidates = {
+        "../config/" + filename,
+        "../../config/" + filename,
+        "config/" + filename,
+    };
+    for(const auto& p : candidates) {
+        std::ifstream f(p);
+        if(f.good()) return p;
+    }
+    return filename; // fallback - may fail later
+}
+
+static bool loadPIDParams(const std::string& file, PIDParams& params) {
+    std::ifstream in(findConfigFile(file));
+    if(!in.is_open()) {
+        std::cerr << "Could not open PID params file: " << file << std::endl;
+        return false;
+    }
+    std::string line;
+    while(std::getline(in,line)) {
+        line = trim(line);
+        if(line.empty() || line[0]=='#') continue;
+        if(line.rfind("kp:",0)==0) params.kp = std::stod(trim(line.substr(3)));
+        else if(line.rfind("ki:",0)==0) params.ki = std::stod(trim(line.substr(3)));
+        else if(line.rfind("kd:",0)==0) params.kd = std::stod(trim(line.substr(3)));
+        else if(line.rfind("output_limits:",0)==0) {
+            // read next lines for min/max
+            std::string sub;
+            if(std::getline(in, sub)) {
+                sub = trim(sub);
+                if(sub.rfind("min:",0)==0) params.output_min = std::stod(trim(sub.substr(4)));
+            }
+            if(std::getline(in, sub)) {
+                sub = trim(sub);
+                if(sub.rfind("max:",0)==0) params.output_max = std::stod(trim(sub.substr(4)));
+            }
+        }
+    }
+    return true;
+}
+
+static bool loadFuzzyParams(const std::string& file, FuzzyParams& fp) {
+    std::ifstream in(findConfigFile(file));
+    if(!in.is_open()) {
+        std::cerr << "Could not open fuzzy params file: " << file << std::endl;
+        return false;
+    }
+    std::string line;
+    std::string section;
+    std::string current_var;
+    while(std::getline(in,line)) {
+        line = trim(line);
+        if(line.empty() || line[0]=='#') continue;
+        if(line == "membership_functions:") { section = "mf"; continue; }
+        if(line == "rules:") { section = "rules"; continue; }
+        if(section == "mf") {
+            if(line.back()==':') {
+                current_var = trim(line.substr(0,line.size()-1));
+                continue;
+            }
+            auto pos = line.find(':');
+            if(pos==std::string::npos) continue;
+            std::string setname = trim(line.substr(0,pos));
+            std::string rest = line.substr(pos+1);
+            auto lb = rest.find('[');
+            auto rb = rest.find(']');
+            if(lb==std::string::npos || rb==std::string::npos) continue;
+            std::string nums = rest.substr(lb+1, rb-lb-1);
+            auto values = parseNumberList(nums);
+            if(values.size()==6) {
+                fp.sets[current_var][setname] = {values[0],values[1],values[2],values[3],values[4],values[5]};
+            }
+        } else if(section == "rules") {
+            if(line[0]=='-') {
+                auto lb=line.find('[');
+                auto rb=line.find(']');
+                if(lb==std::string::npos || rb==std::string::npos) continue;
+                auto tokens = parseStringList(line.substr(lb+1, rb-lb-1));
+                if(tokens.size()==4) {
+                    fp.rules.push_back({tokens[0],tokens[1],tokens[2],tokens[3]});
+                }
+            }
+        }
+    }
+    return true;
+}
+
+static void applyFuzzyParams(agent_control_pkg::GT2FuzzyLogicSystem& fls, const FuzzyParams& fp) {
+    using FOU = agent_control_pkg::GT2FuzzyLogicSystem::IT2TriangularFS_FOU;
+    for(const auto& varPair : fp.sets) {
+        const std::string& var = varPair.first;
+        if(var == "correction") fls.addOutputVariable(var); else fls.addInputVariable(var);
+        for(const auto& setPair : varPair.second) {
+            const auto& fou = setPair.second;
+            fls.addFuzzySetToVariable(var, setPair.first, FOU{fou.l1,fou.l2,fou.l3,fou.u1,fou.u2,fou.u3});
+        }
+    }
+    for(const auto& r : fp.rules) {
+        fls.addRule({{{"error",r[0]},{"dError",r[1]},{"wind",r[2]}},{"correction",r[3]}});
+    }
+}
+
 
 // FakeDrone struct
 struct FakeDrone {
@@ -57,77 +214,6 @@ T clamp(T value, T min, T max) {
     if (value < min) return min;
     if (value > max) return max;
     return value;
-}
-
-// *** ADDED Helper function to initialize an FLS instance ***
-void setup_fls_instance(agent_control_pkg::GT2FuzzyLogicSystem& fls) {
-    using FOU = agent_control_pkg::GT2FuzzyLogicSystem::IT2TriangularFS_FOU;
-
-    // This is called for each FLS (X and Y for each drone)
-    // Ensure variable names here match what FLS expects internally
-    fls.addInputVariable("error");    // FLS will expect this name for the error input
-    fls.addInputVariable("dError");   // FLS will expect this name for the change in error
-    fls.addInputVariable("wind");     // FLS will expect this name for the wind input
-    fls.addOutputVariable("correction"); // FLS will produce an output named "correction"
-
-    // Define Fuzzy Sets for "error"
-    fls.addFuzzySetToVariable("error", "NB", FOU{-10.0, -8.0, -6.0,  -11.0, -8.5, -5.5});
-    fls.addFuzzySetToVariable("error", "NS", FOU{ -7.0, -4.0, -1.0,   -8.0, -4.5,  0.0});
-    fls.addFuzzySetToVariable("error", "ZE", FOU{ -1.0,  0.0,  1.0,   -2.0,  0.0,  2.0});
-    fls.addFuzzySetToVariable("error", "PS", FOU{  1.0,  4.0,  7.0,    0.0,  4.5,  8.0});
-    fls.addFuzzySetToVariable("error", "PB", FOU{  6.0,  8.0, 10.0,    5.5,  8.5, 11.0});
-
-    // Define Fuzzy Sets for "dError"
-    // Note: Your previous main used "NE", "ZE", "PO". The FLS class might expect "DN", "DZ", "DP".
-    // Let's use DN, DZ, DP to match your FLS class test and rule list.
-    fls.addFuzzySetToVariable("dError", "DN", FOU{-5.0, -3.0,  0.0,   -6.0, -3.5,  1.0});
-    fls.addFuzzySetToVariable("dError", "DZ", FOU{-1.0,  0.0,  1.0,   -1.5,  0.0,  1.5});
-    fls.addFuzzySetToVariable("dError", "DP", FOU{ 0.0,  3.0,  5.0,   -1.0,  3.0,  6.0});
-
-    // Define Fuzzy Sets for "wind"
-    // Using your original set names from the FLS test: SNW, WNW, NWN, WPW, SPW
-    fls.addFuzzySetToVariable("wind", "SNW", FOU{-10.0, -8.0, -5.0,  -11.0, -8.5, -4.5});
-    fls.addFuzzySetToVariable("wind", "WNW", FOU{ -7.0, -4.0, -1.0,   -8.0, -4.5,  0.0});
-    fls.addFuzzySetToVariable("wind", "NWN", FOU{ -1.0,  0.0,  1.0,   -1.5,  0.0,  1.5});
-    fls.addFuzzySetToVariable("wind", "WPW", FOU{  1.0,  4.0,  7.0,    0.0,  4.5,  8.0});
-    fls.addFuzzySetToVariable("wind", "SPW", FOU{  6.0,  8.0, 10.0,    5.5,  8.5, 11.0});
-
-    // Define Fuzzy Sets for "correction" (Output)
-    fls.addFuzzySetToVariable("correction", "XLNC",FOU{-7.5, -6.0, -4.5,  -8.5, -6.5, -4.0});
-    fls.addFuzzySetToVariable("correction", "LNC", FOU{-5.0, -4.0, -2.5,  -5.5, -4.5, -2.0});
-    fls.addFuzzySetToVariable("correction", "SNC", FOU{-3.0, -1.5,  0.0,  -3.5, -1.5,  0.5});
-    fls.addFuzzySetToVariable("correction", "NC",  FOU{-0.5,  0.0,  0.5,  -1.0,  0.0,  1.0});
-    fls.addFuzzySetToVariable("correction", "SPC", FOU{ 0.0,  1.5,  3.0,  -0.5,  1.5,  3.5});
-    fls.addFuzzySetToVariable("correction", "LPC", FOU{ 2.5,  4.0,  5.0,   2.0,  4.5,  5.5});
-    fls.addFuzzySetToVariable("correction", "XLPC",FOU{ 4.5,  6.0,  7.5,   4.0,  6.5,  8.5});
-
-
-    // Define Rules (using your 21 rules, adjust consequents for wind if needed)
-    auto R = [&](const std::string& e, const std::string& de, const std::string& w, const std::string& out){
-        fls.addRule({{{"error",e},{"dError",de},{"wind",w}}, {"correction",out}});
-    };
-        // No wind (NWN) - Damping rules & basic error correction
-    R("PB","DZ","NWN","LPC"); R("PS","DZ","NWN","SPC"); R("ZE","DZ","NWN","NC");  R("NS","DZ","NWN","SNC"); R("NB","DZ","NWN","LNC");
-    R("PB","DN","NWN","LPC"); R("PS","DN","NWN","SPC"); R("ZE","DN","NWN","SNC"); // MODIFIED: Was NC, now SNC for damping
-    R("NS","DN","NWN","NC");  R("NB","DN","NWN","SNC");
-    R("PB","DP","NWN","NC");  R("PS","DP","NWN","SNC"); R("ZE","DP","NWN","SPC"); // MODIFIED: Was NC, now SPC for damping
-    R("NS","DP","NWN","SNC"); R("NB","DP","NWN","LNC");
-  // Wind scenarios
-    // When error is ZE (Zero Error) and dError is DZ (Zero Change in Error)
-    // MODIFIED: Stronger direct counteraction for wind
-    R("ZE","DZ","SPW","LNC");  // Strong Positive Wind -> Large Negative Correction (was SNC in your original)
-    R("ZE","DZ","SNW","LPC");  // Strong Negative Wind -> Large Positive Correction (was SPC in your original)
-    // MODIFIED: Weaker direct counteraction for weak wind (original was SNC/SPC, keeping those)
-    R("ZE","DZ","WPW","SNC");  // Weak Positive Wind -> Small Negative Correction
-    R("ZE","DZ","WNW","SPC");  // Weak Negative Wind -> Small Positive Correction
-
-    // Rules when error is present WITH wind (These were your original, keeping them for now,
-    // but they might need tuning based on how wind interacts with an existing error)
-    R("PB","DZ","SPW","XLPC");
-    R("NB","DZ","SNW","XLNC");
-}
-// *** END Added Helper Function ***
-
 
 int main(int argc, char** argv) {
     bool use_fls_flag = false;
@@ -153,6 +239,10 @@ int main(int argc, char** argv) {
     const bool USE_FLS = !ZN_TUNING_ACTIVE && use_fls_flag;
 
     const int NUM_DRONES = 3;
+    PIDParams pid_cfg;
+    loadPIDParams("pid_params.yaml", pid_cfg);
+    FuzzyParams fls_cfg;
+    loadFuzzyParams("fuzzy_params.yaml", fls_cfg);
     std::vector<FakeDrone> drones(NUM_DRONES);
     std::vector<agent_control_pkg::PIDController> pid_x_controllers;
     std::vector<agent_control_pkg::PIDController> pid_y_controllers;
@@ -172,11 +262,11 @@ int main(int argc, char** argv) {
         ki = 0.0;  // Must be 0 for Z-N tuning
         kd = 0.0;  // Must be 0 for Z-N tuning
     } else {
-        // Z-N derived PID gains (from your tuning process)
-        kp = 2.10;  // Z-N calculated value
-        ki = 1.261;  // Z-N calculated value
-        kd = 0.87;  // Z-N calculated value
-        std::cout << "Running with Z-N derived PID gains:" << std::endl;
+        // Load gains from configuration file
+        kp = pid_cfg.kp;
+        ki = pid_cfg.ki;
+        kd = pid_cfg.kd;
+        std::cout << "Running with configured PID gains:" << std::endl;
         std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
         if (USE_FLS) {
             std::cout << "FLS is ENABLED" << std::endl;
@@ -185,8 +275,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    double output_min = -10.0;
-    double output_max = 10.0;
+    double output_min = pid_cfg.output_min;
+    double output_max = pid_cfg.output_max;
 
     // Initialize controllers with Z-N derived gains
     for (int i = 0; i < NUM_DRONES; ++i) {
@@ -200,8 +290,8 @@ int main(int argc, char** argv) {
         
         // Initialize FLS if enabled
         if (USE_FLS) {
-            setup_fls_instance(fls_x_controllers[i]);
-            setup_fls_instance(fls_y_controllers[i]);
+            applyFuzzyParams(fls_x_controllers[i], fls_cfg);
+            applyFuzzyParams(fls_y_controllers[i], fls_cfg);
         }
     }
 
