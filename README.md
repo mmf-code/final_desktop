@@ -152,4 +152,4 @@ Contributions to enhance the simulation, implement ROS 2 features, or improve do
 
 ## License
 
-The `agent_control_pkg/package.xml` mentions the Apache License 2.0. Please add a `LICENSE` file to the root of the project if this is the chosen license.
+This project is licensed under the [Apache License 2.0](LICENSE).
