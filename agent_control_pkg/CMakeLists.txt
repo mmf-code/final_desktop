@@ -1,7 +1,20 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Set vcpkg toolchain file - ADD THIS BEFORE project()
-set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+# Optionally use vcpkg toolchain if available
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  if(DEFINED ENV{VCPKG_ROOT})
+    set(_VCPKG_TOOLCHAIN "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+    if(EXISTS "${_VCPKG_TOOLCHAIN}")
+      set(CMAKE_TOOLCHAIN_FILE "${_VCPKG_TOOLCHAIN}" CACHE STRING "Vcpkg toolchain file")
+    endif()
+  elseif(WIN32)
+    # Fallback to a common Windows installation path
+    set(_VCPKG_TOOLCHAIN "C:/vcpkg/scripts/buildsystems/vcpkg.cmake")
+    if(EXISTS "${_VCPKG_TOOLCHAIN}")
+      set(CMAKE_TOOLCHAIN_FILE "${_VCPKG_TOOLCHAIN}" CACHE STRING "Vcpkg toolchain file")
+    endif()
+  endif()
+endif()
 
 # Enable compile commands export
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
