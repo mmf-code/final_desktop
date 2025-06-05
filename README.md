@@ -81,6 +81,7 @@ The `agent_control_pkg` is set up for a local build.
     ```bash
     Debug\pid_standalone_tester.exe
     ```
+    Use the `--use-fls` flag to enable the fuzzy logic system at runtime.
 3.  The simulation will run, and `multi_drone_sim_data.csv` and `pid_performance_metrics.txt` will be created in the same directory where you ran the executable.
 
 ## Project Structure
