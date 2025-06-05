@@ -269,63 +269,40 @@ GT2FuzzyLogicSystem::typeReduce_KarnikMendel(std::vector<RuleFiringInfo>& rule_f
 
     // --- Calculate y_l (left endpoint of centroid interval) ---
     // Iterative procedure to find k for y_l
-    // Initial guess for y_l_prime (can be average or any y_i)
+    // Initial guess uses lower firing strengths
     double y_l_prime_num = 0.0;
     double y_l_prime_den = 0.0;
-    for(const auto& info : rule_firings_info) { // Initial sum using average weights (not standard KM, but for a starting point)
-        y_l_prime_num += (info.firing_strength.first + info.firing_strength.second)/2.0 * info.consequent_centroid;
-        y_l_prime_den += (info.firing_strength.first + info.firing_strength.second)/2.0;
+    for (const auto& info : rule_firings_info) {
+        y_l_prime_num += info.firing_strength.first * info.consequent_centroid;
+        y_l_prime_den += info.firing_strength.first;
     }
-    double y_l_prime = (y_l_prime_den == 0) ? 0.0 : y_l_prime_num / y_l_prime_den;
+    double y_l_prime = (y_l_prime_den == 0.0) ? 0.0 : y_l_prime_num / y_l_prime_den;
     
     double y_l_prev_prime = std::numeric_limits<double>::lowest();
     int max_iterations = 20; // KM usually converges quickly
     int iter_count = 0;
 
+
     while (std::abs(y_l_prime - y_l_prev_prime) > 1e-6 && iter_count < max_iterations) {
         y_l_prev_prime = y_l_prime;
+
+        int k_switch = 0;
+        while (k_switch < N - 1 && rule_firings_info[k_switch + 1].consequent_centroid <= y_l_prime) {
+            ++k_switch;
+        }
+
         double num = 0.0;
         double den = 0.0;
-        int k_switch = -1; // Find switching point k
-
-        // Determine k based on y_l_prime (the point where we switch from w_tilde to w_bar)
-        // We want to pick weights to minimize the weighted average.
-        // If y_i < y_l_prime, use w_tilde_i to give it more weight if y_i is small.
-        // If y_i > y_l_prime, use w_bar_i to give it less weight if y_i is large.
-        // This logic is slightly off for standard KM for y_l.
-        // Standard KM for y_l: sort y_i. Iterate k. Weights are w_tilde for y_i <= y_s(k) and w_bar for y_i > y_s(k)
-        // Let's use the direct iterative search for k based on sorted y_i.
-
-        for (int k = 0; k < N; ++k) { // k is the potential switching point (0 to N-1)
-                                      // All centroids <= y_s[k] get upper firing strength, > y_s[k] get lower.
-            double current_num = 0.0;
-            double current_den = 0.0;
-            for (int i = 0; i < N; ++i) {
-                if (i <= k) { // y_s[i] <= y_s[k]
-                    current_num += rule_firings_info[i].firing_strength.second * rule_firings_info[i].consequent_centroid; // w_tilde * y
-                    current_den += rule_firings_info[i].firing_strength.second; // w_tilde
-                } else { // y_s[i] > y_s[k]
-                    current_num += rule_firings_info[i].firing_strength.first * rule_firings_info[i].consequent_centroid;  // w_bar * y
-                    current_den += rule_firings_info[i].firing_strength.first;  // w_bar
-                }
-            }
-            y_l_prime = (current_den == 0) ? 0.0 : current_num / current_den;
-            if (k < N -1) {
-                if (rule_firings_info[k].consequent_centroid <= y_l_prime && y_l_prime <= rule_firings_info[k+1].consequent_centroid) {
-                    break; // Found k
-                }
-            } else { // k == N-1, last iteration
-                 if (rule_firings_info[k].consequent_centroid <= y_l_prime) { // Check if y_l_prime is consistent with the last y_s(k)
-                    break; 
-                 }
-            }
+        for (int i = 0; i <= k_switch; ++i) {
+            num += rule_firings_info[i].firing_strength.second * rule_firings_info[i].consequent_centroid;
+            den += rule_firings_info[i].firing_strength.second;
         }
-         // If den is zero after loop (no rules fired meaningfully with chosen weights)
-        if (y_l_prime_den == 0 && iter_count ==0) { // check if initial den was zero
-             double sum_w_bar_y = 0, sum_w_bar = 0;
-             for(const auto& rfi : rule_firings_info) { sum_w_bar_y += rfi.firing_strength.first * rfi.consequent_centroid; sum_w_bar += rfi.firing_strength.first; }
-             y_l_prime = (sum_w_bar == 0) ? 0.0 : sum_w_bar_y / sum_w_bar;
+        for (int i = k_switch + 1; i < N; ++i) {
+            num += rule_firings_info[i].firing_strength.first * rule_firings_info[i].consequent_centroid;
+            den += rule_firings_info[i].firing_strength.first;
         }
+
+        y_l_prime = (den == 0.0) ? 0.0 : num / den;
 
         iter_count++;
     }
@@ -337,9 +314,9 @@ GT2FuzzyLogicSystem::typeReduce_KarnikMendel(std::vector<RuleFiringInfo>& rule_f
     // Similar iterative procedure for y_r
     double y_r_prime_num = 0.0;
     double y_r_prime_den = 0.0;
-     for(const auto& info : rule_firings_info) { // Initial sum using average weights
-        y_r_prime_num += (info.firing_strength.first + info.firing_strength.second)/2.0 * info.consequent_centroid;
-        y_r_prime_den += (info.firing_strength.first + info.firing_strength.second)/2.0;
+    for (const auto& info : rule_firings_info) {
+        y_r_prime_num += info.firing_strength.second * info.consequent_centroid;
+        y_r_prime_den += info.firing_strength.second;
     }
     double y_r_prime = (y_r_prime_den == 0) ? 0.0 : y_r_prime_num / y_r_prime_den;
 
@@ -348,37 +325,25 @@ GT2FuzzyLogicSystem::typeReduce_KarnikMendel(std::vector<RuleFiringInfo>& rule_f
 
     while (std::abs(y_r_prime - y_r_prev_prime) > 1e-6 && iter_count < max_iterations) {
         y_r_prev_prime = y_r_prime;
+
+        int k_switch = 0;
+        while (k_switch < N - 1 && rule_firings_info[k_switch + 1].consequent_centroid <= y_r_prime) {
+            ++k_switch;
+        }
+
         double num = 0.0;
         double den = 0.0;
-        // Standard KM for y_r: sort y_i. Iterate k. Weights are w_bar for y_i <= y_s(k) and w_tilde for y_i > y_s(k)
-        for (int k = 0; k < N; ++k) { // k is the potential switching point
-            double current_num = 0.0;
-            double current_den = 0.0;
-            for (int i = 0; i < N; ++i) {
-                if (i <= k) { // y_s[i] <= y_s[k]
-                    current_num += rule_firings_info[i].firing_strength.first * rule_firings_info[i].consequent_centroid; // w_bar * y
-                    current_den += rule_firings_info[i].firing_strength.first; // w_bar
-                } else { // y_s[i] > y_s[k]
-                    current_num += rule_firings_info[i].firing_strength.second * rule_firings_info[i].consequent_centroid;  // w_tilde * y
-                    current_den += rule_firings_info[i].firing_strength.second;  // w_tilde
-                }
-            }
-            y_r_prime = (current_den == 0) ? 0.0 : current_num / current_den;
-             if (k < N -1) {
-                if (rule_firings_info[k].consequent_centroid <= y_r_prime && y_r_prime <= rule_firings_info[k+1].consequent_centroid) {
-                    break; 
-                }
-            } else { // k == N-1
-                if (rule_firings_info[k].consequent_centroid <= y_r_prime) {
-                    break;
-                }
-            }
+        for (int i = 0; i <= k_switch; ++i) {
+            num += rule_firings_info[i].firing_strength.first * rule_firings_info[i].consequent_centroid;
+            den += rule_firings_info[i].firing_strength.first;
         }
-        if (y_r_prime_den == 0 && iter_count == 0) {
-             double sum_w_tilde_y = 0, sum_w_tilde = 0;
-             for(const auto& rfi : rule_firings_info) { sum_w_tilde_y += rfi.firing_strength.second * rfi.consequent_centroid; sum_w_tilde += rfi.firing_strength.second; }
-             y_r_prime = (sum_w_tilde == 0) ? 0.0 : sum_w_tilde_y / sum_w_tilde;
+        for (int i = k_switch + 1; i < N; ++i) {
+            num += rule_firings_info[i].firing_strength.second * rule_firings_info[i].consequent_centroid;
+            den += rule_firings_info[i].firing_strength.second;
         }
+
+        y_r_prime = (den == 0.0) ? 0.0 : num / den;
+
         iter_count++;
     }
     y_r = y_r_prime;
