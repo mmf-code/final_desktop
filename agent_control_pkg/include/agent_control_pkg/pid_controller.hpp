@@ -55,7 +55,7 @@ private:
     // Internal state
     double previous_error_;
     double integral_;
-    bool first_calculation_; // Should be bool
+    bool first_calculation_; // true on first call
 
     double previous_measurement_;
 
