@@ -214,6 +214,7 @@ T clamp(T value, T min, T max) {
     if (value < min) return min;
     if (value > max) return max;
     return value;
+}
 
 int main(int argc, char** argv) {
     bool use_fls_flag = false;
