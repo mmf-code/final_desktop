@@ -56,4 +56,9 @@ output:
   csv_prefix: "multi_drone_pid_test"
   console_output:
     enabled: true
-    update_interval: 5.0  # seconds 
+    update_interval: 5.0  # seconds
+
+# Fuzzy Logic Settings
+fuzzy_logic:
+  enabled: true
+  params_file: "fuzzy_params.yaml"

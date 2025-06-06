@@ -56,6 +56,10 @@ struct SimulationConfig {
     std::string csv_prefix;
     bool console_output_enabled;
     double console_update_interval;
+
+    // Fuzzy Logic Settings
+    bool fls_enabled{false};
+    std::string fuzzy_params_file{"fuzzy_params.yaml"};
 };
 
 class ConfigReader {
