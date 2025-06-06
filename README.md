@@ -12,10 +12,10 @@ The `agent_control_pkg` contains the current standalone C++ simulation:
 *   **`pid_standalone_tester`**: A C++ executable that simulates multiple "fake" drones. It uses the `pid_logic_lib` to guide these drones to specific target coordinates, simulating formation flying. Key file:
     *   `agent_control_pkg/src/agent_control_main.cpp`
 *   **Simulation Output**:
-    *   `multi_drone_sim_data.csv`: Generated in the execution directory, this file contains detailed time-series data of the simulation, including drone positions, velocities, errors, and PID controller term values.
-    *   `pid_performance_metrics.txt`: Also generated in the execution directory, this file provides performance metrics for each drone's PID controller, such as peak overshoot and settling time.
+*   `multi_drone_sim_data_<timestamp>.csv`: Generated in the execution directory with the current date and time appended to the filename. It contains detailed time-series data of the simulation, including drone positions, velocities, errors, and PID controller term values.
+*   `performance_metrics_<timestamp>_pid.txt` (or `_fls.txt`): Also generated in the execution directory with a timestamp. This file provides performance metrics for each drone's controller, such as peak overshoot and settling time.
 *   **Plotting Utility**:
-    *   `agent_control_pkg/build/Debug/plot_pid_data.py`: A Python script (may require adjustment based on actual build path) intended for visualizing the data from `multi_drone_sim_data.csv`.
+*   `agent_control_pkg/build/Debug/plot_pid_data.py`: A Python script (may require adjustment based on actual build path) intended for visualizing the data from the generated CSV file.
 
 ## Planned ROS 2 Integration (Future Work)
 
@@ -82,7 +82,7 @@ The `agent_control_pkg` is set up for a local build.
     Debug\pid_standalone_tester.exe
     ```
     Use the `--use-fls` flag to enable the fuzzy logic system at runtime.
-3.  The simulation will run, and `multi_drone_sim_data.csv` and `pid_performance_metrics.txt` will be created in the same directory where you ran the executable.
+3.  The simulation will run, creating timestamped output files (e.g., `multi_drone_sim_data_20240101_120000.csv` and `performance_metrics_20240101_120000_pid.txt`) in the same directory where you ran the executable.
 
 ## Project Structure
 
