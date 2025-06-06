@@ -109,6 +109,7 @@ target_include_directories(pid_standalone_tester PRIVATE
 target_link_libraries(pid_standalone_tester PRIVATE
     pid_logic_lib
     fuzzy_logic_lib
+    config_reader_lib
 )
 
 # --- Executable for Fuzzy Logic standalone test ---

@@ -48,6 +48,9 @@ struct SimulationConfig {
     bool wind_enabled;
     std::vector<WindPhase> wind_phases;
 
+    // Fuzzy Logic System
+    bool fls_enabled;
+
     // Output Settings
     bool csv_enabled;
     std::string csv_prefix;

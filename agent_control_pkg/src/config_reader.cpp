@@ -35,6 +35,11 @@ void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::No
     config.dt = sim_yaml["simulation"]["dt"].as<double>();
     config.total_time = sim_yaml["simulation"]["total_time"].as<double>();
     config.num_drones = sim_yaml["simulation"]["num_drones"].as<int>();
+    if (sim_yaml["fls_enabled"]) {
+        config.fls_enabled = sim_yaml["fls_enabled"].as<bool>();
+    } else {
+        config.fls_enabled = false;
+    }
 
     // Load formation settings
     config.formation_side_length = sim_yaml["formation"]["side_length"].as<double>();
