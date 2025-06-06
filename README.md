@@ -12,8 +12,8 @@ The `agent_control_pkg` contains the current standalone C++ simulation:
 *   **`pid_standalone_tester`**: A C++ executable that simulates multiple "fake" drones. It uses the `pid_logic_lib` to guide these drones to specific target coordinates, simulating formation flying. Key file:
     *   `agent_control_pkg/src/agent_control_main.cpp`
 *   **Simulation Output**:
-    *   `multi_drone_sim_data.csv`: Generated in the execution directory, this file contains detailed time-series data of the simulation, including drone positions, velocities, errors, and PID controller term values.
-    *   `pid_performance_metrics.txt`: Also generated in the execution directory, this file provides performance metrics for each drone's PID controller, such as peak overshoot and settling time.
+    *   `multi_drone_sim_data.csv`: Generated in the directory specified by `output_directory` (default `outputs/`). This file contains detailed time-series data of the simulation, including drone positions, velocities, errors, and PID controller term values.
+    *   `pid_performance_metrics.txt`: Placed in the same directory, this file provides performance metrics for each drone's PID controller, such as peak overshoot and settling time.
 *   **Plotting Utility**:
     *   `agent_control_pkg/build/Debug/plot_pid_data.py`: A Python script (may require adjustment based on actual build path) intended for visualizing the data from `multi_drone_sim_data.csv`.
 
@@ -82,7 +82,7 @@ The `agent_control_pkg` is set up for a local build.
     Debug\pid_standalone_tester.exe
     ```
     Use the `--use-fls` flag to enable the fuzzy logic system at runtime.
-3.  The simulation will run, and `multi_drone_sim_data.csv` and `pid_performance_metrics.txt` will be created in the same directory where you ran the executable.
+3.  The simulation will run, and `multi_drone_sim_data.csv` along with `pid_performance_metrics.txt` will be written to the directory specified by `output_directory` (default `outputs/`).
 
 ## Project Structure
 

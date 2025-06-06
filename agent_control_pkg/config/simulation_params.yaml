@@ -55,6 +55,7 @@ controller:
 output:
   csv_enabled: true
   csv_prefix: "multi_drone_pid_test"
+  output_directory: "outputs"
   console_output:
     enabled: true
     update_interval: 5.0  # seconds
