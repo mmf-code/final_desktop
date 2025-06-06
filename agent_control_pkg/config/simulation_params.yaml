@@ -1,62 +1,126 @@
-simulation_settings:
-  dt: 0.05
-  total_time: 120.0
-  num_drones: 3
-  ziegler_nichols_tuning:
-    enable: false
-    kp_test_value: 0.1
-    simulation_time: 30.0
 controller_settings:
-  pid:
-    kp: 3.1
-    ki: 0.4
-    kd: 2.2
-    output_min: -10.0
-    output_max: 10.0
   fls:
     enable: false
-    params_file: "fuzzy_params.yaml"
-scenario_settings:
-  enable_wind: true
-  formation_side_length: 4.0
-  formation:
-    initial_positions:
-      drone_0: [0.0, 1.15]
-      drone_1: [-2.0, -2.0]
-      drone_2: [2.0, -2.0]
-  phases:
-    - center: [5.0, 5.0]
-      start_time: 0.0
-    - center: [-5.0, 0.0]
-      start_time: 30.0
-    - center: [0.0, -5.0]
-      start_time: 60.0
-    - center: [5.0, 0.0]
-      start_time: 90.0
-  wind:
-    phases:
-      - phase: 1
-        time_windows:
-          - {start_time: 5.0, end_time: 15.0, force: [3.0, 0.0]}
-          - {start_time: 10.0, end_time: 20.0, force: [0.0, -1.0]}
-      - phase: 2
-        time_windows:
-          - {start_time: 35.0, end_time: 45.0, force: [-2.0, 0.0]}
-          - {start_time: 40.0, end_time: 50.0, force: [0.0, 1.5]}
-      - phase: 3
-        time_windows:
-          - {start_time: 65.0, end_time: 70.0, force: [0.0, 0.0], is_sine_wave: true, sine_frequency_rad_s: 1.0}
-          - {start_time: 70.0, end_time: 72.0, force: [0.0, 4.0]}
-          - {start_time: 72.0, end_time: 75.0, force: [0.0, -2.0]}
-      - phase: 4
-        time_windows:
-          - {start_time: 95.0, end_time: 105.0, force: [2.5, -2.5]}
+    params_file: fuzzy_params.yaml
+  pid:
+    kd: 0.0
+    ki: 0.0
+    kp: 3.0
+    output_max: 10.0
+    output_min: -10.0
 output_settings:
-  csv_enabled: true
-  csv_prefix: "multi_drone_pid_test"
-  output_directory: "outputs"
-  metrics_enabled: true
-  metrics_prefix: "metrics_sim"
   console_output:
     enabled: true
     update_interval: 5.0
+  csv_enabled: true
+  csv_prefix: multi_drone_pid_test
+  metrics_enabled: true
+  metrics_prefix: metrics_sim
+  output_directory: outputs
+scenario_settings:
+  enable_wind: false
+  formation:
+    initial_positions:
+      drone_0:
+      - 0.0
+      - 1.15
+      drone_1:
+      - -2.0
+      - -2.0
+      drone_2:
+      - 2.0
+      - -2.0
+  formation_side_length: 4.0
+  phases:
+  - center:
+    - 5.0
+    - 5.0
+    start_time: 0.0
+  - center:
+    - -5.0
+    - 0.0
+    start_time: 30.0
+  - center:
+    - 0.0
+    - -5.0
+    start_time: 60.0
+  - center:
+    - 5.0
+    - 0.0
+    start_time: 90.0
+  wind:
+    phases:
+    - phase: 1
+      time_windows:
+      - end_time: 15.0
+        force:
+        - 3.0
+        - 0.0
+        start_time: 5.0
+      - end_time: 20.0
+        force:
+        - 0.0
+        - -1.0
+        start_time: 10.0
+    - phase: 2
+      time_windows:
+      - end_time: 45.0
+        force:
+        - -2.0
+        - 0.0
+        start_time: 35.0
+      - end_time: 50.0
+        force:
+        - 0.0
+        - 1.5
+        start_time: 40.0
+    - phase: 3
+      time_windows:
+      - end_time: 70.0
+        force:
+        - 0.0
+        - 0.0
+        is_sine_wave: true
+        sine_frequency_rad_s: 1.0
+        start_time: 65.0
+      - end_time: 72.0
+        force:
+        - 0.0
+        - 4.0
+        start_time: 70.0
+      - end_time: 75.0
+        force:
+        - 0.0
+        - -2.0
+        start_time: 72.0
+    - phase: 4
+      time_windows:
+      - end_time: 105.0
+        force:
+        - 2.5
+        - -2.5
+        start_time: 95.0
+simulation_settings:
+  dt: 0.05
+  num_drones: 3
+  total_time: 30.0
+  ziegler_nichols_tuning:
+    enable: true
+    kp_test_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - !!python/object/apply:numpy.dtype
+      args:
+      - f8
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      AAAAAAAA4D8=
+    simulation_time: 30.0
