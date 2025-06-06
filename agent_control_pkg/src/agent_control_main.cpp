@@ -6,6 +6,8 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>   // For std::fixed, std::setprecision, std::setw (if needed for formatting filenames)
+#include <chrono>    // For timestamp generation
+#include <ctime>
 #include <cmath>     // For sqrt, abs
 #include <fstream>   // For file I/O
 #include <limits>    // For std::numeric_limits
@@ -64,6 +66,20 @@ static std::vector<std::string> parseStringList(const std::string& in) {
         values.push_back(trim(tok));
     }
     return values;
+}
+
+static std::string getCurrentTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t tt = std::chrono::system_clock::to_time_t(now);
+    std::tm tm;
+#ifdef _WIN32
+    localtime_s(&tm, &tt);
+#else
+    localtime_r(&tt, &tm);
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y%m%d_%H%M%S");
+    return oss.str();
 }
 
 static std::string findConfigFile(const std::string& filename) {
@@ -290,9 +306,12 @@ int main(int argc, char** argv) {
 
     // --- File naming using config ---
     std::string controller_type_log_msg = USE_FLS ? "PID+FLS Controller" : "PID-Only Controller";
-    std::string csv_file_name = config.csv_prefix + (USE_FLS ? "_FLS" : "_NOFLS") +
+    std::string timestamp = getCurrentTimestamp();
+    std::string csv_file_name = config.csv_prefix + "_" + timestamp +
+                               (USE_FLS ? "_FLS" : "_NOFLS") +
                                (config.wind_enabled ? "_WIND_ON" : "_WIND_OFF") + ".csv";
-    std::string metrics_file_name = std::string("performance_metrics") + (USE_FLS ? "_fls" : "_pid") +
+    std::string metrics_file_name = std::string("performance_metrics_") + timestamp +
+                                   (USE_FLS ? "_fls" : "_pid") +
                                    (config.wind_enabled ? "_wind" : "_nowind") + ".txt";
 
     std::filesystem::create_directories(config.output_directory);
