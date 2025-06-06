@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-<<<<<<< HEAD
 #include <map>    // For FuzzyParams
 #include <array>  // For FuzzyParams
 #include <yaml-cpp/yaml.h> // For YAML parsing
@@ -66,26 +65,20 @@ struct SimPhase {
 };
 
 // Structure for wind time windows
-=======
-#include <yaml-cpp/yaml.h>
-
-namespace agent_control_pkg {
-
->>>>>>> parent of b1aaa38 (itworks)
 struct WindTimeWindow {
     double start_time;
     double end_time;
-    std::vector<double> force;
+    std::vector<double> force; // {force_x, force_y_or_offset_for_sine}
     bool is_sine_wave;
 };
 
+// Structure for wind configuration per phase
 struct WindPhase {
-    int phase_number;
+    int phase_number; // 1-based phase number this wind config applies to
     std::vector<WindTimeWindow> time_windows;
 >>>>>>> parent of 2a992f0 (zn_again)
 };
 
-<<<<<<< HEAD
 // Main simulation configuration structure
 struct SimulationConfig {
     // Simulation Settings
@@ -102,25 +95,6 @@ struct SimulationConfig {
     SimPIDParams pid_params; // PID parameters are now a member struct
     bool enable_fls{false};
     std::string fuzzy_params_file{"fuzzy_params.yaml"};
-=======
-struct PhaseConfig {
-    std::vector<double> center;
-    double start_time;
-};
-
-struct SimulationConfig {
-    // PID Parameters
-    double kp;
-    double ki;
-    double kd;
-    double output_min;
-    double output_max;
-
-    // Simulation Settings
-    double dt;
-    double total_time;
-    int num_drones;
->>>>>>> parent of b1aaa38 (itworks)
 
 <<<<<<< HEAD
     // Scenario Settings
@@ -138,47 +112,31 @@ struct SimulationConfig {
     std::string metrics_prefix{"metrics_sim"};
 =======
     // Formation Settings
-    double formation_side_length;
-    std::vector<std::pair<double, double>> initial_positions;
+    double formation_side_length{4.0};
+    std::vector<std::pair<double, double>> initial_positions; 
 
     // Phase Settings
-    std::vector<PhaseConfig> phases;
+    std::vector<SimPhase> phases;
 
     // Wind Settings
-    bool wind_enabled;
+    bool wind_enabled{false};
     std::vector<WindPhase> wind_phases;
-  
-// Inside struct SimulationConfig:
-// ...
-// Controller Settings
-SimPIDParams pid_params;
-bool enable_fls{false}; // THIS IS THE ONE TO KEEP
-// std::string fuzzy_params_filename{"fuzzy_params.yaml"}; // Add this if you want to configure the FLS param file name
-// ...
 
     // Output Settings
-<<<<<<< HEAD
     bool csv_enabled{true}; 
     std::string csv_prefix{"multi_agent_sim"}; 
 >>>>>>> parent of 2a992f0 (zn_again)
     bool console_output_enabled{true};
     double console_update_interval{5.0};
     std::string output_directory{"outputs"};
-=======
-    bool csv_enabled;
-    std::string csv_prefix;
-    bool console_output_enabled;
-    double console_update_interval;
->>>>>>> parent of b1aaa38 (itworks)
 };
 
+// Class responsible for loading configurations
 class ConfigReader {
 public:
-    static SimulationConfig loadConfig(const std::string& pid_config_path, 
-                                     const std::string& sim_config_path);
+    static SimulationConfig loadConfig(const std::string& primary_sim_config_path);
 
 private:
-<<<<<<< HEAD
 <<<<<<< HEAD
     static void loadSimulationSettings(const YAML::Node& node, SimulationConfig& config);
     static void loadControllerSettings(const YAML::Node& node, SimulationConfig& config);
@@ -219,13 +177,5 @@ std::string findConfigFilePath(const std::string& filename); // Declaration
 bool loadFuzzyParamsYAML(const std::string& file, FuzzyParams& fp); // Declaration, matches cpp
 >>>>>>> parent of 2a992f0 (zn_again)
 
-=======
-    static void loadPIDParams(SimulationConfig& config, const YAML::Node& pid_yaml);
-    static void loadSimulationParams(SimulationConfig& config, const YAML::Node& sim_yaml);
-    static void loadWindConfig(SimulationConfig& config, const YAML::Node& wind_node);
-};
-
->>>>>>> parent of b1aaa38 (itworks)
 } // namespace agent_control_pkg
-
-#endif // CONFIG_READER_HPP 
+#endif // CONFIG_READER_HPP
