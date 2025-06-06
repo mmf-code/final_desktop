@@ -82,13 +82,25 @@ void ConfigReader::loadWindConfig(SimulationConfig& config, const YAML::Node& wi
             time_window.start_time = window["start"].as<double>();
             time_window.end_time = window["end"].as<double>();
             
-            auto force = window["force"].as<std::vector<double>>();
+            YAML::Node force_node = window["force"];
             time_window.is_sine_wave = false;
-            
-            if (force.size() == 2 && force[0] == "sin") {
+
+            if (force_node.IsSequence() && force_node.size() == 2 &&
+                force_node[0].IsScalar() &&
+                force_node[0].as<std::string>() == "sin") {
                 time_window.is_sine_wave = true;
-                time_window.force = {1.0, 0.0}; // Amplitude and offset for sine wave
+                double offset = 0.0;
+                try {
+                    offset = force_node[1].as<double>();
+                } catch (const YAML::Exception&) {
+                    offset = 0.0;
+                }
+                time_window.force = {1.0, offset}; // Amplitude and offset for sine wave
             } else {
+                std::vector<double> force;
+                for (const auto& val : force_node) {
+                    force.push_back(val.as<double>());
+                }
                 time_window.force = force;
             }
             
