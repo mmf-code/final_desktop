@@ -313,7 +313,12 @@ int main(int argc, char** argv) {
     std::string metrics_file_name = std::string("performance_metrics_") + timestamp +
                                    (USE_FLS ? "_fls" : "_pid") +
                                    (config.wind_enabled ? "_wind" : "_nowind") + ".txt";
-    std::ofstream csv_file(csv_file_name);
+
+    std::filesystem::create_directories(config.output_directory);
+    std::filesystem::path csv_path = std::filesystem::path(config.output_directory) / csv_file_name;
+    std::filesystem::path metrics_path = std::filesystem::path(config.output_directory) / metrics_file_name;
+
+    std::ofstream csv_file(csv_path);
     if (!csv_file.is_open()) {
         std::cerr << "Error opening CSV file!" << std::endl;
         return 1;
@@ -334,9 +339,9 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
     // Open metrics file
     std::ofstream metrics_file;
     if (!ZN_TUNING_ACTIVE) { // Only create metrics file if not in P-only ZN step-by-step tuning
-        metrics_file.open(metrics_file_name);
+        metrics_file.open(metrics_path);
         if (!metrics_file.is_open()) {
-            std::cerr << "Error: Could not open metrics file: " << metrics_file_name << std::endl;
+            std::cerr << "Error: Could not open metrics file: " << metrics_path << std::endl;
             csv_file.close();  // Close CSV file before returning
             return 1;
         }
@@ -718,9 +723,9 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
     csv_file.close();
 
     std::cout << "\nSimulation complete. Data written to:\n"
-              << "- CSV data: " << csv_file_name << "\n";
+              << "- CSV data: " << csv_path.string() << "\n";
     if (!ZN_TUNING_ACTIVE) {
-        std::cout << "- Metrics: " << metrics_file_name << "\n";
+        std::cout << "- Metrics: " << metrics_path.string() << "\n";
     }
     std::cout << "Controller type used: " << controller_type_log_msg 
               << " (Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << ")" << std::endl;

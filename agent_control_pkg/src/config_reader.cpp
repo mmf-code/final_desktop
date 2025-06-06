@@ -258,6 +258,7 @@ void ConfigReader::loadOutputSettings(SimulationConfig& config, const YAML::Node
     }
     config.csv_enabled = node["csv_enabled"].as<bool>(config.csv_enabled);
     config.csv_prefix = node["csv_prefix"].as<std::string>(config.csv_prefix);
+    config.output_directory = node["output_directory"].as<std::string>(config.output_directory);
     if (node["console_output"]) {
         config.console_output_enabled = node["console_output"]["enabled"].as<bool>(config.console_output_enabled);
         config.console_update_interval = node["console_output"]["update_interval"].as<double>(config.console_update_interval);

@@ -64,8 +64,9 @@ struct SimulationConfig {
     // Output Settings
     bool csv_enabled{true}; 
     std::string csv_prefix{"multi_agent_sim"}; 
-    bool console_output_enabled{true}; 
-    double console_update_interval{5.0}; 
+    bool console_output_enabled{true};
+    double console_update_interval{5.0};
+    std::string output_directory{"outputs"};
 };
 
 // Class responsible for loading configurations
