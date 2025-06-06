@@ -42,9 +42,13 @@ wind:
         - {start: 65.0, end: 70.0, force: ["sin", 0.0]} # Special case for sine wave
         - {start: 70.0, end: 72.0, force: [0.0, 4.0]}
         - {start: 72.0, end: 75.0, force: [0.0, -2.0]}
-    - phase: 4
-      time_windows:
-        - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
+  - phase: 4
+    time_windows:
+      - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
+
+# Controller Settings
+controller:
+  fls_enabled: false
 
 # Output Settings
 output:

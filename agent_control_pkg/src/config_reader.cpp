@@ -57,7 +57,15 @@ void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::No
         config.phases.push_back(phase_config);
     }
 
-    // Load wind settings
+    // Load wind and controller settings
+    config.wind_enabled = sim_yaml["wind"]["enabled"].as<bool>();
+    if (sim_yaml["controller"] && sim_yaml["controller"].IsMap()) {
+        config.fls_enabled = sim_yaml["controller"]["fls_enabled"].as<bool>();
+    } else {
+        config.fls_enabled = false;
+    }
+
+    // Load detailed wind configuration
     loadWindConfig(config, sim_yaml["wind"]);
 
     // Load output settings
@@ -68,7 +76,6 @@ void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::No
 }
 
 void ConfigReader::loadWindConfig(SimulationConfig& config, const YAML::Node& wind_node) {
-    config.wind_enabled = wind_node["enabled"].as<bool>();
     config.wind_phases.clear();
     
     if (!config.wind_enabled) return;
