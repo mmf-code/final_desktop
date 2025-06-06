@@ -25,12 +25,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Add filesystem-related definitions
-if(MSVC)
-    add_definitions(-D_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING)
-    add_definitions(-DFILESYSTEM_EXPERIMENTAL=0)
-endif()
-
 # Add include directories for all targets
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -42,9 +36,33 @@ enable_testing()
 include(CTest)
 include(GoogleTest)
 
-# Find required packages
+# Find GTest package
 find_package(GTest CONFIG REQUIRED)
-find_package(yaml-cpp CONFIG REQUIRED)
+
+# Find yaml-cpp package
+set(YAML_CPP_REQUIRED_VERSION "0.6.0")
+find_package(yaml-cpp ${YAML_CPP_REQUIRED_VERSION} CONFIG)
+if(NOT yaml-cpp_FOUND)
+    message(STATUS "yaml-cpp not found via find_package, attempting to find it via pkg-config")
+    find_package(PkgConfig)
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(YAML_CPP yaml-cpp>=${YAML_CPP_REQUIRED_VERSION})
+    endif()
+endif()
+
+if(NOT yaml-cpp_FOUND AND NOT YAML_CPP_FOUND)
+    message(STATUS "yaml-cpp not found, attempting to use vcpkg")
+    if(WIN32)
+        set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+    endif()
+    include(FetchContent)
+    FetchContent_Declare(
+        yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG yaml-cpp-0.7.0
+    )
+    FetchContent_MakeAvailable(yaml-cpp)
+endif()
 
 # --- Config Reader Library ---
 add_library(config_reader_lib
@@ -55,7 +73,14 @@ target_include_directories(config_reader_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(config_reader_lib PUBLIC yaml-cpp)
+if(yaml-cpp_FOUND)
+    target_link_libraries(config_reader_lib PUBLIC yaml-cpp::yaml-cpp)
+elseif(YAML_CPP_FOUND)
+    target_include_directories(config_reader_lib PUBLIC ${YAML_CPP_INCLUDE_DIRS})
+    target_link_libraries(config_reader_lib PUBLIC ${YAML_CPP_LIBRARIES})
+else()
+    target_link_libraries(config_reader_lib PUBLIC yaml-cpp)
+endif()
 
 # --- PID Logic Library ---
 add_library(pid_logic_lib
