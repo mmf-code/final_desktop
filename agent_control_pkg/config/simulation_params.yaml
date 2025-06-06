@@ -1,62 +1,66 @@
-simulation_settings:
+# Simulation Configuration Parameters
+
+# General Simulation Settings
+simulation:
   dt: 0.05
   total_time: 120.0
   num_drones: 3
-  ziegler_nichols_tuning:
-    enable: false
-    kp_test_value: 0.1
-    simulation_time: 30.0
-controller_settings:
-  pid:
-    kp: 3.1
-    ki: 0.4
-    kd: 2.2
-    output_min: -10.0
-    output_max: 10.0
-  fls:
-    enable: false
-    params_file: "fuzzy_params.yaml"
-scenario_settings:
-  enable_wind: true
-  formation_side_length: 4.0
-  formation:
-    initial_positions:
-      drone_0: [0.0, 1.15]
-      drone_1: [-2.0, -2.0]
-      drone_2: [2.0, -2.0]
+enable_fls: false
+
+# Formation Settings
+formation:
+  side_length: 4.0
+  initial_positions:
+    drone_0: [0.0, 1.15]  # Top vertex
+    drone_1: [-2.0, -2.0] # Bottom-left
+    drone_2: [2.0, -2.0]  # Bottom-right
+
+# Phase Settings
+phases:
+  - center: [5.0, 5.0]
+    start_time: 0.0
+  - center: [-5.0, 0.0]
+    start_time: 30.0
+  - center: [0.0, -5.0]
+    start_time: 60.0
+  - center: [5.0, 0.0]
+    start_time: 90.0
+
+# Wind Settings
+wind:
+  enabled: true
   phases:
-    - center: [5.0, 5.0]
-      start_time: 0.0
-    - center: [-5.0, 0.0]
-      start_time: 30.0
-    - center: [0.0, -5.0]
-      start_time: 60.0
-    - center: [5.0, 0.0]
-      start_time: 90.0
-  wind:
-    phases:
-      - phase: 1
-        time_windows:
-          - {start_time: 5.0, end_time: 15.0, force: [3.0, 0.0]}
-          - {start_time: 10.0, end_time: 20.0, force: [0.0, -1.0]}
-      - phase: 2
-        time_windows:
-          - {start_time: 35.0, end_time: 45.0, force: [-2.0, 0.0]}
-          - {start_time: 40.0, end_time: 50.0, force: [0.0, 1.5]}
-      - phase: 3
-        time_windows:
-          - {start_time: 65.0, end_time: 70.0, force: [0.0, 0.0], is_sine_wave: true, sine_frequency_rad_s: 1.0}
-          - {start_time: 70.0, end_time: 72.0, force: [0.0, 4.0]}
-          - {start_time: 72.0, end_time: 75.0, force: [0.0, -2.0]}
-      - phase: 4
-        time_windows:
-          - {start_time: 95.0, end_time: 105.0, force: [2.5, -2.5]}
-output_settings:
+    - phase: 1
+      time_windows:
+        - {start: 5.0, end: 15.0, force: [3.0, 0.0]}
+        - {start: 10.0, end: 20.0, force: [0.0, -1.0]}
+    - phase: 2
+      time_windows:
+        - {start: 35.0, end: 45.0, force: [-2.0, 0.0]}
+        - {start: 40.0, end: 50.0, force: [0.0, 1.5]}
+    - phase: 3
+      time_windows:
+        - {start: 65.0, end: 70.0, force: ["sin", 0.0]} # Special case for sine wave
+        - {start: 70.0, end: 72.0, force: [0.0, 4.0]}
+        - {start: 72.0, end: 75.0, force: [0.0, -2.0]}
+  - phase: 4
+    time_windows:
+      - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
+
+# Controller Settings
+controller:
+  enable_fls: false
+
+# Output Settings
+output:
   csv_enabled: true
   csv_prefix: "multi_drone_pid_test"
   output_directory: "outputs"
-  metrics_enabled: true
-  metrics_prefix: "metrics_sim"
   console_output:
     enabled: true
-    update_interval: 5.0
+    update_interval: 5.0  # seconds
+
+# Fuzzy Logic Settings
+fuzzy_logic:
+  enabled: true
+  params_file: "fuzzy_params.yaml"
