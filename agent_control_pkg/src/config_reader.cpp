@@ -1,319 +1,314 @@
 #include "../include/agent_control_pkg/config_reader.hpp"
-#include <iostream>
-#include <fstream>   // For std::ifstream in loadFuzzyParamsYAML
-#include <sstream>   // For std::stringstream in loadFuzzyParamsYAML
-#include <filesystem> // For robust path finding
+#include <stdexcept> // For std::runtime_error
+#include <iostream>  // For std::cerr, std::cout
+#include <fstream>   // For std::ifstream
+#include <sstream>   // For std::stringstream
 
 namespace agent_control_pkg {
 
-// --- Utility functions for fuzzy_params.yaml parsing ---
-static std::string trim_fuzzy_cfg(const std::string& s) {
+// --- Utility functions (copied from your agent_control_main.cpp for now) ---
+static std::string trim_cfg(const std::string& s) {
     size_t start = s.find_first_not_of(" \t\r\n");
     size_t end = s.find_last_not_of(" \t\r\n");
     if(start==std::string::npos) return "";
     return s.substr(start, end-start+1);
 }
 
-static std::vector<double> parseNumberList_fuzzy_cfg(const std::string& in) {
+static std::vector<double> parseNumberList_cfg(const std::string& in) {
     std::vector<double> values;
     std::stringstream ss(in);
     std::string tok;
     while(std::getline(ss, tok, ',')) {
-        tok = trim_fuzzy_cfg(tok);
-        if(!tok.empty()) {
-            try {
-                values.push_back(std::stod(tok));
-            } catch (const std::invalid_argument& ia) {
-                std::cerr << "Warning: Invalid number '" << tok << "' in list. Skipping." << std::endl;
-            } catch (const std::out_of_range& oor) {
-                std::cerr << "Warning: Number '" << tok << "' out of range. Skipping." << std::endl;
-            }
-        }
+        tok = trim_cfg(tok);
+        if(!tok.empty()) values.push_back(std::stod(tok));
     }
     return values;
 }
 
-static std::vector<std::string> parseStringList_fuzzy_cfg(const std::string& in) {
+static std::vector<std::string> parseStringList_cfg(const std::string& in) {
     std::vector<std::string> values;
     std::stringstream ss(in);
     std::string tok;
     while(std::getline(ss, tok, ',')) {
-        values.push_back(trim_fuzzy_cfg(tok));
+        values.push_back(trim_cfg(tok));
     }
     return values;
 }
-// --- End Utility functions for fuzzy_params.yaml ---
-
+// --- End Utility functions ---
 
 std::string findConfigFilePath(const std::string& filename) {
-    std::vector<std::filesystem::path> candidate_dirs = {
-        ".", // Current working directory
-        "config",
-        "../config",
-        "../../config",
-        "../../agent_control_pkg/config" // Common for out-of-source builds
+    std::vector<std::string> candidates = {
+        filename,                                     // 1. Check CWD (e.g., build/Debug/simulation_params.yaml)
+        "config/" + filename,                         // 2. Check CWD/config/ (e.g., build/Debug/config/simulation_params.yaml)
+        "../config/" + filename,                      // 3. Check CWD/../config/ (e.g., build/config/simulation_params.yaml)
+        "../../config/" + filename,                   // 4. Check CWD/../../config/ (e.g., <project_root>/config/simulation_params.yaml)
+        "../../agent_control_pkg/config/" + filename  // 5. Check CWD/../../agent_control_pkg/config/
     };
 
-    // Also check if filename is an absolute path
-    std::filesystem::path direct_path(filename);
-    if (direct_path.is_absolute() && std::filesystem::exists(direct_path) && std::filesystem::is_regular_file(direct_path)) {
-        return direct_path.string();
-    }
-
-    for (const auto& dir : candidate_dirs) {
-        std::filesystem::path full_path = dir / filename;
-        if (std::filesystem::exists(full_path) && std::filesystem::is_regular_file(full_path)) {
-            return std::filesystem::weakly_canonical(full_path).string(); // Normalize
+    // std::cout << "Searching for config file: " << filename << std::endl; // For debugging
+    for(const auto& p : candidates) {
+        // std::cout << "  Checking relative path: " << p << std::endl; // For debugging
+        std::ifstream f(p);
+        if(f.good()) {
+            // std::cout << "  SUCCESS: Found config file at: " << p << std::endl; // For debugging
+            return p;
         }
     }
-    std::cerr << "WARNING: Config file '" << filename << "' not found in common candidate paths. Trying original path." << std::endl;
+    std::cerr << "WARNING: Config file '" << filename << "' not found in candidate paths." << std::endl;
     return filename; // Fallback
 }
 
 
-SimulationConfig ConfigReader::loadConfig(const std::string& config_filepath) {
-    SimulationConfig config; // Initialize with defaults
-    std::string actual_filepath = findConfigFilePath(config_filepath);
+SimulationConfig ConfigReader::loadConfig(const std::string& primary_sim_config_path) {
+    SimulationConfig config; // Uses default values from struct definition
+    std::string actual_filepath = findConfigFilePath(primary_sim_config_path);
 
-    YAML::Node root_node;
     try {
-        root_node = YAML::LoadFile(actual_filepath);
+        YAML::Node root_node = YAML::LoadFile(actual_filepath);
+        
+        // It's better to pass the relevant sub-node to each load function
+        if (root_node["simulation_settings"]) loadSimulationSettings(config, root_node["simulation_settings"]);
+        else if (root_node["simulation"]) loadSimulationSettings(config, root_node["simulation"]); // Old key from your YAML
+
+        if (root_node["controller_settings"]) loadControllerSettings(config, root_node["controller_settings"]);
+        else if (root_node["controller"]) loadControllerSettings(config, root_node["controller"]); // Old key
+
+        if (root_node["scenario_settings"]) loadScenarioSettings(config, root_node["scenario_settings"]);
+        else { // Try loading formation, phases, wind individually if scenario_settings is not top-level
+            if (root_node["formation"]) loadFormationSettings(config, root_node["formation"]);
+            if (root_node["phases"]) loadPhases(config, root_node["phases"]);
+            if (root_node["wind"]) loadWindConfig(config, root_node["wind"]); // Load from top-level "wind" node
+        }
+        
+        if (root_node["output_settings"]) loadOutputSettings(config, root_node["output_settings"]);
+        else if (root_node["output"]) loadOutputSettings(config, root_node["output"]); // Old key
+        
     } catch (const YAML::Exception& e) {
-        std::cerr << "FATAL: Error loading YAML file '" << actual_filepath << "': " << e.what() << std::endl;
-        std::cerr << "Using default configuration values for everything." << std::endl;
-        return config; // Return default config
+        throw std::runtime_error("Error loading configuration file '" + actual_filepath + "': " + std::string(e.what()));
     }
-
-    // Load each section, providing the relevant sub-node
-    if (root_node["simulation_settings"]) {
-        loadSimulationSettings(root_node["simulation_settings"], config);
-    } else {
-        std::cerr << "Warning: 'simulation_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-
-    if (root_node["controller_settings"]) {
-        loadControllerSettings(root_node["controller_settings"], config);
-    } else {
-        std::cerr << "Warning: 'controller_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-
-    if (root_node["scenario_settings"]) {
-        loadScenarioSettings(root_node["scenario_settings"], config);
-    } else {
-        std::cerr << "Warning: 'scenario_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-    
-    if (root_node["output_settings"]) {
-        loadOutputSettings(root_node["output_settings"], config);
-    } else {
-        std::cerr << "Warning: 'output_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-    
     return config;
 }
 
-void ConfigReader::loadSimulationSettings(const YAML::Node& node, SimulationConfig& config) {
-    if (!node.IsMap()) {
-        std::cerr << "Warning: 'simulation_settings' node is not a map. Skipping." << std::endl;
+void ConfigReader::loadSimulationSettings(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsMap()) {
+        std::cerr << "Warning: 'simulation_settings' or 'simulation' node not found or not a map in YAML." << std::endl;
         return;
     }
-    if (node["dt"]) config.dt = node["dt"].as<double>(config.dt);
-    if (node["total_time"]) config.total_time = node["total_time"].as<double>(config.total_time);
-    if (node["num_drones"]) config.num_drones = node["num_drones"].as<int>(config.num_drones);
-
-    if (node["ziegler_nichols_tuning"]) {
-        YAML::Node zn_node = node["ziegler_nichols_tuning"];
-        if (zn_node["enable"]) config.zn_tuning_params.enable = zn_node["enable"].as<bool>(config.zn_tuning_params.enable);
-        if (zn_node["kp_test_value"]) config.zn_tuning_params.kp_test_value = zn_node["kp_test_value"].as<double>(config.zn_tuning_params.kp_test_value);
-        if (zn_node["simulation_time"]) config.zn_tuning_params.simulation_time = zn_node["simulation_time"].as<double>(config.zn_tuning_params.simulation_time);
-    }
+    config.dt = node["dt"].as<double>(config.dt);
+    config.total_time = node["total_time"].as<double>(config.total_time);
+    config.num_drones = node["num_drones"].as<int>(config.num_drones);
 }
 
-void ConfigReader::loadControllerSettings(const YAML::Node& node, SimulationConfig& config) {
-     if (!node.IsMap()) {
-        std::cerr << "Warning: 'controller_settings' node is not a map. Skipping." << std::endl;
+void ConfigReader::loadControllerSettings(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsMap()) {
+        std::cerr << "Warning: 'controller_settings' or 'controller' node not found or not a map in YAML." << std::endl;
         return;
     }
     if (node["pid"]) {
-        YAML::Node pid_node = node["pid"];
-        if (pid_node["kp"]) config.pid_params.kp = pid_node["kp"].as<double>(config.pid_params.kp);
-        if (pid_node["ki"]) config.pid_params.ki = pid_node["ki"].as<double>(config.pid_params.ki);
-        if (pid_node["kd"]) config.pid_params.kd = pid_node["kd"].as<double>(config.pid_params.kd);
-        if (pid_node["output_min"]) config.pid_params.output_min = pid_node["output_min"].as<double>(config.pid_params.output_min);
-        if (pid_node["output_max"]) config.pid_params.output_max = pid_node["output_max"].as<double>(config.pid_params.output_max);
+        config.pid_params.kp = node["pid"]["kp"].as<double>(config.pid_params.kp);
+        config.pid_params.ki = node["pid"]["ki"].as<double>(config.pid_params.ki);
+        config.pid_params.kd = node["pid"]["kd"].as<double>(config.pid_params.kd);
+        config.pid_params.output_min = node["pid"]["output_min"].as<double>(config.pid_params.output_min);
+        config.pid_params.output_max = node["pid"]["output_max"].as<double>(config.pid_params.output_max);
+    } else { // Try loading PID from top level of controller node (compatibility)
+        config.pid_params.kp = node["kp"].as<double>(config.pid_params.kp);
+        config.pid_params.ki = node["ki"].as<double>(config.pid_params.ki);
+        config.pid_params.kd = node["kd"].as<double>(config.pid_params.kd);
+        if (node["output_limits"]){
+            config.pid_params.output_min = node["output_limits"]["min"].as<double>(config.pid_params.output_min);
+            config.pid_params.output_max = node["output_limits"]["max"].as<double>(config.pid_params.output_max);
+        }
     }
+
+    // FLS settings can be under controller_settings.fls or a top-level fuzzy_logic
     if (node["fls"]) {
-        YAML::Node fls_node = node["fls"];
-        if (fls_node["enable"]) config.enable_fls = fls_node["enable"].as<bool>(config.enable_fls);
-        if (fls_node["params_file"]) config.fuzzy_params_file = fls_node["params_file"].as<std::string>(config.fuzzy_params_file);
+        config.enable_fls = node["fls"]["enable"].as<bool>(config.enable_fls);
+        config.fuzzy_params_file = node["fls"]["params_file"].as<std::string>(config.fuzzy_params_file);
+    } else if (node["fuzzy_logic"]) { // Check alternative structure from your YAML
+         config.enable_fls = node["fuzzy_logic"]["enabled"].as<bool>(config.enable_fls);
+         config.fuzzy_params_file = node["fuzzy_logic"]["params_file"].as<std::string>(config.fuzzy_params_file);
+    } else if (node["enable_fls"]){ // Check for direct enable_fls under controller
+         config.enable_fls = node["enable_fls"].as<bool>(config.enable_fls);
     }
 }
 
-void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig& config) {
-    if (!node.IsMap()) {
-        std::cerr << "Warning: 'scenario_settings' node is not a map. Skipping." << std::endl;
+// Combined scenario settings loader
+void ConfigReader::loadScenarioSettings(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsMap()) {
+        std::cerr << "Warning: 'scenario_settings' node not found or not a map in YAML." << std::endl;
         return;
     }
-    if (node["enable_wind"]) config.wind_enabled = node["enable_wind"].as<bool>(config.wind_enabled);
+    config.wind_enabled = node["enable_wind"].as<bool>(config.wind_enabled); // Assuming enable_wind is directly under scenario_settings
     
-    if (node["formation_side_length"]) config.formation_side_length = node["formation_side_length"].as<double>(config.formation_side_length);
+    if (node["formation"]) loadFormationSettings(config, node["formation"]);
+    if (node["phases"]) loadPhases(config, node["phases"]);
+    if (config.wind_enabled && node["wind"]) loadWindConfig(config, node["wind"]["phases"]); // Assuming wind config is under wind.phases
+}
 
-    if (node["formation"] && node["formation"]["initial_positions"]) {
-        YAML::Node ip_node = node["formation"]["initial_positions"];
-        if (ip_node.IsMap()) {
-            config.initial_positions.clear(); 
-            for (int i = 0; i < config.num_drones; ++i) {
-                std::string drone_key = "drone_" + std::to_string(i);
-                if (ip_node[drone_key] && ip_node[drone_key].IsSequence() && ip_node[drone_key].size() == 2) {
-                    config.initial_positions.push_back({
-                        ip_node[drone_key][0].as<double>(),
-                        ip_node[drone_key][1].as<double>()
-                    });
-                } else {
-                    std::cerr << "Warning: Initial position for " << drone_key << " missing/malformed. Using default (0,0) for it." << std::endl;
-                    config.initial_positions.push_back({0.0, 0.0}); // Add a default if specific one fails
+
+void ConfigReader::loadFormationSettings(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsMap()) {
+        std::cerr << "Warning: 'formation' node not found or not a map in YAML." << std::endl;
+        return;
+    }
+    config.formation_side_length = node["side_length"].as<double>(config.formation_side_length);
+
+    if (node["initial_positions"] && node["initial_positions"].IsMap()) {
+        YAML::Node initial_pos_node = node["initial_positions"];
+        config.initial_positions.clear();
+        bool all_loaded_successfully = true;
+        for (int i = 0; i < config.num_drones; ++i) {
+            std::string drone_key = "drone_" + std::to_string(i);
+            if (initial_pos_node[drone_key]) {
+                try {
+                    auto pos_vec = initial_pos_node[drone_key].as<std::vector<double>>();
+                    if (pos_vec.size() == 2) {
+                        config.initial_positions.push_back({pos_vec[0], pos_vec[1]});
+                    } else {
+                        std::cerr << "Warning: Initial position for " << drone_key << " must have 2 elements (x, y)." << std::endl;
+                        all_loaded_successfully = false; break;
+                    }
+                } catch (const YAML::Exception& e) {
+                    std::cerr << "Warning: Error parsing initial position for " << drone_key << ": " << e.what() << std::endl;
+                    all_loaded_successfully = false; break;
                 }
+            } else {
+                std::cerr << "Warning: Initial position for " << drone_key << " not found in YAML." << std::endl;
+                all_loaded_successfully = false; break;
             }
-            // Ensure correct number of positions, even if some failed to load above
-            while(config.initial_positions.size() < config.num_drones) {
-                 config.initial_positions.push_back({0.0,0.0});
-            }
-        } else {
-            std::cerr << "Warning: 'formation.initial_positions' is not a map. Using default positions." << std::endl;
+        }
+        if (!all_loaded_successfully || config.initial_positions.size() != config.num_drones) {
+            std::cerr << "Warning: Could not load all initial positions correctly or count mismatch. Using default positions." << std::endl;
+            config.initial_positions.clear(); // Clear any partial load
         }
     } else {
-         std::cerr << "Warning: 'formation.initial_positions' not found. Using default positions." << std::endl;
+        std::cerr << "Warning: 'formation.initial_positions' is not a map or not found. Using default positions." << std::endl;
     }
-    
-    // Fallback if loading failed entirely or not enough positions for num_drones
-    if (config.initial_positions.size() != config.num_drones && config.num_drones > 0) {
-        std::cout << "INFO: Initial positions count mismatch or load error. Generating default positions." << std::endl;
+
+    // Fallback if loading failed or not enough positions
+    if (config.initial_positions.size() != config.num_drones) {
+        std::cout << "INFO: Using default calculated initial drone positions." << std::endl;
         config.initial_positions.clear();
         for(int i = 0; i < config.num_drones; ++i) {
-            // A simple default: spread them out on X axis
             config.initial_positions.push_back({static_cast<double>(i) * 2.0 - (static_cast<double>(config.num_drones - 1) * 1.0), 0.0});
         }
     }
-
-
-    if (node["phases"] && node["phases"].IsSequence()) {
-        config.phases.clear();
-        for (const auto& phase_node : node["phases"]) {
-            PhaseConfig pc;
-            if (phase_node["center"] && phase_node["center"].IsSequence() && phase_node["center"].size() == 2) {
-                pc.center = phase_node["center"].as<std::vector<double>>();
-            } else {
-                 std::cerr << "Warning: Phase 'center' malformed. Using [0,0]." << std::endl;
-                 pc.center = {0.0, 0.0};
-            }
-            if (phase_node["start_time"]) {
-                pc.start_time = phase_node["start_time"].as<double>();
-            } else {
-                pc.start_time = 0.0; // Default if not specified
-            }
-            config.phases.push_back(pc);
-        }
-    }
-
-    if (config.wind_enabled && node["wind"] && node["wind"]["phases"] && node["wind"]["phases"].IsSequence()) {
-        config.wind_phases.clear();
-        for (const auto& wp_node : node["wind"]["phases"]) {
-            WindPhaseConfig wpc;
-            if (wp_node["phase"]) wpc.phase_number = wp_node["phase"].as<int>();
-            
-            if (wp_node["time_windows"] && wp_node["time_windows"].IsSequence()) {
-                for (const auto& tw_node : wp_node["time_windows"]) {
-                    TimeWindow tw;
-                    if (tw_node["start_time"]) tw.start_time = tw_node["start_time"].as<double>(); else tw.start_time = 0.0;
-                    if (tw_node["end_time"]) tw.end_time = tw_node["end_time"].as<double>(); else tw.end_time = 0.0;
-                    
-                    if (tw_node["force"] && tw_node["force"].IsSequence() && tw_node["force"].size() == 2) {
-                        tw.force = tw_node["force"].as<std::vector<double>>();
-                    } else {
-                         std::cerr << "Warning: Wind time_window 'force' malformed or missing. Using [0,0]." << std::endl;
-                        tw.force = {0.0, 0.0};
-                    }
-                    if (tw_node["is_sine_wave"]) tw.is_sine_wave = tw_node["is_sine_wave"].as<bool>(false);
-                    if (tw_node["sine_frequency_rad_s"]) tw.sine_frequency_rad_s = tw_node["sine_frequency_rad_s"].as<double>(1.0);
-                    wpc.time_windows.push_back(tw);
-                }
-            }
-            config.wind_phases.push_back(wpc);
-        }
-    }
 }
 
-
-void ConfigReader::loadOutputSettings(const YAML::Node& node, SimulationConfig& config) {
-    if (!node.IsMap()) {
-        std::cerr << "Warning: 'output_settings' node is not a map. Skipping." << std::endl;
+void ConfigReader::loadPhases(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsSequence()) {
+         std::cerr << "Warning: 'phases' node not found or not a sequence in YAML." << std::endl;
         return;
     }
-    if (node["output_directory"]) config.output_directory = node["output_directory"].as<std::string>(config.output_directory);
-    if (node["csv_enabled"]) config.csv_enabled = node["csv_enabled"].as<bool>(config.csv_enabled);
-    if (node["csv_prefix"]) config.csv_prefix = node["csv_prefix"].as<std::string>(config.csv_prefix);
-    if (node["metrics_enabled"]) config.metrics_enabled = node["metrics_enabled"].as<bool>(config.metrics_enabled);
-    if (node["metrics_prefix"]) config.metrics_prefix = node["metrics_prefix"].as<std::string>(config.metrics_prefix);
-
-    if (node["console_output"]) {
-        YAML::Node co_node = node["console_output"];
-        if (co_node["enabled"]) config.console_output_enabled = co_node["enabled"].as<bool>(config.console_output_enabled);
-        if (co_node["update_interval"]) config.console_update_interval = co_node["update_interval"].as<double>(config.console_update_interval);
+    config.phases.clear();
+    for (const auto& phase_node : node) {
+        SimPhase p;
+        p.center = phase_node["center"].as<std::vector<double>>();
+        p.start_time = phase_node["start_time"].as<double>();
+        config.phases.push_back(p);
     }
 }
 
-// Implementation for loading fuzzy parameters (matches your multi_drone_pid_test_main.cpp style)
-bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp) {
-    std::string actual_filepath = findConfigFilePath(file_path); // Use the same path finding logic
+void ConfigReader::loadWindConfig(SimulationConfig& config, const YAML::Node& wind_phases_node) {
+    config.wind_phases.clear();
+    if (!config.wind_enabled || !wind_phases_node || !wind_phases_node.IsSequence()) {
+        if (config.wind_enabled) std::cerr << "Warning: Wind enabled but 'wind.phases' node not found or not a sequence." << std::endl;
+        return;
+    }
+
+    for (const auto& phase_node : wind_phases_node) {
+        WindPhase wind_phase_cfg; // Use the struct from hpp
+        wind_phase_cfg.phase_number = phase_node["phase"].as<int>();
+        
+        if (phase_node["time_windows"] && phase_node["time_windows"].IsSequence()) {
+            for (const auto& window_node : phase_node["time_windows"]) {
+                WindTimeWindow time_window_cfg; // Use the struct from hpp
+                time_window_cfg.start_time = window_node["start"].as<double>();
+                time_window_cfg.end_time = window_node["end"].as<double>();
+                
+                YAML::Node force_node = window_node["force"];
+                time_window_cfg.is_sine_wave = false; 
+
+                if (force_node.IsSequence() && force_node.size() >= 1) {
+                    if (force_node[0].IsScalar() && force_node[0].as<std::string>() == "sin") {
+                        time_window_cfg.is_sine_wave = true;
+                        time_window_cfg.force.push_back(1.0); // Default amplitude for X
+                        if (force_node.size() > 1) time_window_cfg.force.push_back(force_node[1].as<double>(0.0));
+                        else time_window_cfg.force.push_back(0.0); 
+                    } else {
+                        for(const auto& val : force_node) {
+                            time_window_cfg.force.push_back(val.as<double>());
+                        }
+                        while(time_window_cfg.force.size() < 2) time_window_cfg.force.push_back(0.0); // Pad to 2 elements
+                    }
+                } else { 
+                    time_window_cfg.force.assign({0.0, 0.0}); // Default to [0,0] if not a sequence
+                }
+                wind_phase_cfg.time_windows.push_back(time_window_cfg);
+            }
+        }
+        config.wind_phases.push_back(wind_phase_cfg);
+    }
+}
+
+void ConfigReader::loadOutputSettings(SimulationConfig& config, const YAML::Node& node) {
+    if (!node || !node.IsMap()) {
+        std::cerr << "Warning: 'output_settings' or 'output' node not found or not a map in YAML." << std::endl;
+        return;
+    }
+    config.csv_enabled = node["csv_enabled"].as<bool>(config.csv_enabled);
+    config.csv_prefix = node["csv_prefix"].as<std::string>(config.csv_prefix);
+    config.output_directory = node["output_directory"].as<std::string>(config.output_directory);
+    if (node["console_output"]) {
+        config.console_output_enabled = node["console_output"]["enabled"].as<bool>(config.console_output_enabled);
+        config.console_update_interval = node["console_output"]["update_interval"].as<double>(config.console_update_interval);
+    }
+}
+
+bool loadFuzzyParamsYAML(const std::string& file, FuzzyParams& fp) {
+    std::string actual_filepath = findConfigFilePath(file);
     std::ifstream in(actual_filepath);
     if (!in.is_open()) {
-        std::cerr << "Error: Could not open fuzzy params file: " << actual_filepath << std::endl;
+        std::cerr << "Could not open fuzzy params file: " << actual_filepath << std::endl;
         return false;
     }
     std::string line;
     std::string section;
     std::string current_var;
-    fp.sets.clear(); // Clear previous data
-    fp.rules.clear();
-
     while (std::getline(in, line)) {
-        line = trim_fuzzy_cfg(line);
+        line = trim_cfg(line);
         if (line.empty() || line[0] == '#') continue;
         if (line == "membership_functions:") { section = "mf"; current_var = ""; continue; }
         if (line == "rules:") { section = "rules"; current_var = ""; continue; }
 
         if (section == "mf") {
             if (line.length() > 1 && line.back() == ':' && line.find_first_of(" \t") == std::string::npos) {
-                current_var = trim_fuzzy_cfg(line.substr(0, line.size() - 1));
-                fp.sets[current_var]; // Ensure the map entry for current_var exists
+                current_var = trim_cfg(line.substr(0, line.size() - 1));
+                fp.sets[current_var] = {}; 
                 continue;
             }
-            if (current_var.empty()) {
-                 // std::cerr << "Warning: Fuzzy MF line encountered outside a variable block: " << line << std::endl;
-                continue;
-            }
+            if (current_var.empty()) continue;
 
             auto pos = line.find(':');
             if (pos == std::string::npos) continue;
-            std::string setname = trim_fuzzy_cfg(line.substr(0, pos));
+            std::string setname = trim_cfg(line.substr(0, pos));
             std::string rest = line.substr(pos + 1);
             auto lb = rest.find('[');
             auto rb = rest.find(']');
             if (lb == std::string::npos || rb == std::string::npos) continue;
             std::string nums_str = rest.substr(lb + 1, rb - lb - 1);
-            auto values = parseNumberList_fuzzy_cfg(nums_str);
+            auto values = parseNumberList_cfg(nums_str);
             if (values.size() == 6) {
                 fp.sets[current_var][setname] = {values[0], values[1], values[2], values[3], values[4], values[5]};
-            } else {
-                std::cerr << "Warning: Fuzzy set '" << setname << "' for var '" << current_var << "' has incorrect number of params. Expected 6, got " << values.size() << std::endl;
             }
         } else if (section == "rules") {
-            if (line.rfind("- [", 0) == 0 && line.back() == ']') { // More robust rule parsing
-                auto tokens = parseStringList_fuzzy_cfg(line.substr(3, line.size() - 4)); // Extract content between "- [" and "]"
+            if (line[0] == '-') {
+                auto lb = line.find('[');
+                auto rb = line.find(']');
+                if (lb == std::string::npos || rb == std::string::npos) continue;
+                auto tokens = parseStringList_cfg(line.substr(lb + 1, rb - lb - 1));
                 if (tokens.size() == 4) {
                     fp.rules.push_back({tokens[0], tokens[1], tokens[2], tokens[3]});
-                } else {
-                     std::cerr << "Warning: Fuzzy rule has incorrect number of tokens. Expected 4, got " << tokens.size() << " in: " << line << std::endl;
                 }
             }
         }
