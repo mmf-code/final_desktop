@@ -45,7 +45,6 @@ Currently, only the C++ standalone simulation within `agent_control_pkg` is buil
 
 * A C++ compiler supporting C++17 (e.g., GCC, Clang, MSVC)
 * CMake (version 3.16 or higher)
-* [yaml-cpp](https://github.com/jbeder/yaml-cpp) (YAML parser library)
 
 **Build Instructions:**
 
@@ -63,8 +62,6 @@ The `agent_control_pkg` is set up for a local build.
 3. Configure the project with CMake:
    ```bash
    cmake ..
-   # If using vcpkg
-   # cmake .. -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake
    ```
    *Note: If you are using Visual Studio, you might need to specify a generator, e.g., `cmake .. -G "Visual Studio 17 2022"`.*
 4. Build the project:
@@ -148,25 +145,6 @@ This overview highlights the key code, configuration, and documentation files yo
 
 * **CMake** (>=3.16)
 * **C++17 compatible compiler**
-* **yaml-cpp** (YAML parser library)
-
-### Installing dependencies with vcpkg (Windows)
-
-On Windows systems, the easiest way to obtain `yaml-cpp` is via [vcpkg](https://github.com/microsoft/vcpkg):
-
-```bash
-git clone https://github.com/microsoft/vcpkg
-cd vcpkg
-./bootstrap-vcpkg.bat
-vcpkg install yaml-cpp:x64-windows
-```
-
-When configuring the project with CMake, provide the vcpkg toolchain file so CMake can locate `yaml-cpp`:
-
-```bash
-cmake .. -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake
-```
-
 
 ## Contributing
 
