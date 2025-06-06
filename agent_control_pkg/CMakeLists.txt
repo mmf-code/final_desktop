@@ -67,6 +67,7 @@ endif()
 # --- Config Reader Library ---
 add_library(config_reader_lib
     src/config_reader.cpp
+    src/fuzzy_params_loader.cpp
 )
 target_include_directories(config_reader_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
