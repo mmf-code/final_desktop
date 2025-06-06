@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
     // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
 
     // Flag to control FLS usage
-    const bool USE_FLS = config.fls_enabled && !ZN_TUNING_ACTIVE;
+    const bool USE_FLS = config.enable_fls && !ZN_TUNING_ACTIVE;
 
     const int NUM_DRONES = config.num_drones;
     FuzzyParams fls_cfg;
