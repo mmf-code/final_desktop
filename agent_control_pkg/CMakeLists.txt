@@ -177,6 +177,7 @@ target_include_directories(multi_drone_pid_tester PRIVATE
 target_link_libraries(multi_drone_pid_tester PRIVATE
     pid_logic_lib  # Link against your PID library
     config_reader_lib  # Link against config reader library
+    fuzzy_logic_lib
 )
 
 # Copy compile_commands.json to source directory
