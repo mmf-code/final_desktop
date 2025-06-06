@@ -47,9 +47,14 @@ struct SimulationConfig {
     // Wind Settings
     bool wind_enabled;
     std::vector<WindPhase> wind_phases;
-
-    // Fuzzy Logic System
-    bool fls_enabled;
+  
+// Inside struct SimulationConfig:
+// ...
+// Controller Settings
+SimPIDParams pid_params;
+bool enable_fls{false}; // THIS IS THE ONE TO KEEP
+// std::string fuzzy_params_filename{"fuzzy_params.yaml"}; // Add this if you want to configure the FLS param file name
+// ...
 
     // Output Settings
     bool csv_enabled;

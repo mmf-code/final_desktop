@@ -62,7 +62,15 @@ void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::No
         config.phases.push_back(phase_config);
     }
 
-    // Load wind settings
+    // Load wind and controller settings
+    config.wind_enabled = sim_yaml["wind"]["enabled"].as<bool>();
+    if (sim_yaml["controller"] && sim_yaml["controller"].IsMap()) {
+        config.fls_enabled = sim_yaml["controller"]["fls_enabled"].as<bool>();
+    } else {
+        config.fls_enabled = false;
+    }
+
+    // Load detailed wind configuration
     loadWindConfig(config, sim_yaml["wind"]);
 
     // Load output settings
@@ -70,10 +78,21 @@ void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::No
     config.csv_prefix = sim_yaml["output"]["csv_prefix"].as<std::string>();
     config.console_output_enabled = sim_yaml["output"]["console_output"]["enabled"].as<bool>();
     config.console_update_interval = sim_yaml["output"]["console_output"]["update_interval"].as<double>();
+
+    // Load fuzzy logic settings with defaults
+    config.fls_enabled = false;
+    config.fuzzy_params_file = "fuzzy_params.yaml";
+    if (sim_yaml["fuzzy_logic"]) {
+        if (sim_yaml["fuzzy_logic"]["enabled"]) {
+            config.fls_enabled = sim_yaml["fuzzy_logic"]["enabled"].as<bool>();
+        }
+        if (sim_yaml["fuzzy_logic"]["params_file"]) {
+            config.fuzzy_params_file = sim_yaml["fuzzy_logic"]["params_file"].as<std::string>();
+        }
+    }
 }
 
 void ConfigReader::loadWindConfig(SimulationConfig& config, const YAML::Node& wind_node) {
-    config.wind_enabled = wind_node["enabled"].as<bool>();
     config.wind_phases.clear();
     
     if (!config.wind_enabled) return;

@@ -67,6 +67,7 @@ endif()
 # --- Config Reader Library ---
 add_library(config_reader_lib
     src/config_reader.cpp
+    src/fuzzy_params_loader.cpp
 )
 target_include_directories(config_reader_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -179,6 +180,7 @@ target_link_libraries(multi_drone_pid_tester PRIVATE
     pid_logic_lib  # Link against your PID library
     fuzzy_logic_lib  # Link against fuzzy logic library
     config_reader_lib  # Link against config reader library
+    fuzzy_logic_lib
 )
 
 # Copy compile_commands.json to source directory

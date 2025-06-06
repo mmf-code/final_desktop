@@ -43,9 +43,13 @@ wind:
         - {start: 65.0, end: 70.0, force: ["sin", 0.0]} # Special case for sine wave
         - {start: 70.0, end: 72.0, force: [0.0, 4.0]}
         - {start: 72.0, end: 75.0, force: [0.0, -2.0]}
-    - phase: 4
-      time_windows:
-        - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
+  - phase: 4
+    time_windows:
+      - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
+
+# Controller Settings
+controller:
+  fls_enabled: false
 
 # Output Settings
 output:
@@ -53,4 +57,9 @@ output:
   csv_prefix: "multi_drone_pid_test"
   console_output:
     enabled: true
-    update_interval: 5.0  # seconds 
+    update_interval: 5.0  # seconds
+
+# Fuzzy Logic Settings
+fuzzy_logic:
+  enabled: true
+  params_file: "fuzzy_params.yaml"
