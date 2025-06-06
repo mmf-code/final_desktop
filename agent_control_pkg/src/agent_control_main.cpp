@@ -236,8 +236,7 @@ T clamp(T value, T min, T max) {
 int main(int argc, char** argv) {
     (void)argc; (void)argv;
     agent_control_pkg::SimulationConfig config =
-        agent_control_pkg::ConfigReader::loadConfig("pid_params.yaml",
-                                                  "simulation_params.yaml");
+        agent_control_pkg::ConfigReader::loadConfig("simulation_params.yaml");
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
     const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
                                          // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
@@ -273,9 +272,9 @@ int main(int argc, char** argv) {
         kd = 0.0;  // Must be 0 for Z-N tuning
     } else {
         // Load gains from configuration file
-        kp = config.kp;
-        ki = config.ki;
-        kd = config.kd;
+        kp = config.pid_params.kp;
+        ki = config.pid_params.ki;
+        kd = config.pid_params.kd;
         std::cout << "Running with configured PID gains:" << std::endl;
         std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
         if (USE_FLS) {
@@ -285,8 +284,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    double output_min = config.output_min;
-    double output_max = config.output_max;
+    double output_min = config.pid_params.output_min;
+    double output_max = config.pid_params.output_max;
 
     // Initialize controllers with Z-N derived gains
     for (int i = 0; i < NUM_DRONES; ++i) {
