@@ -1,0 +1,102 @@
+#include "../include/agent_control_pkg/config_reader.hpp"
+#include <stdexcept>
+#include <cmath>
+
+namespace agent_control_pkg {
+
+SimulationConfig ConfigReader::loadConfig(const std::string& pid_config_path, 
+                                        const std::string& sim_config_path) {
+    SimulationConfig config;
+    
+    try {
+        YAML::Node pid_yaml = YAML::LoadFile(pid_config_path);
+        YAML::Node sim_yaml = YAML::LoadFile(sim_config_path);
+        
+        loadPIDParams(config, pid_yaml);
+        loadSimulationParams(config, sim_yaml);
+        
+    } catch (const YAML::Exception& e) {
+        throw std::runtime_error("Error loading configuration: " + std::string(e.what()));
+    }
+    
+    return config;
+}
+
+void ConfigReader::loadPIDParams(SimulationConfig& config, const YAML::Node& pid_yaml) {
+    config.kp = pid_yaml["kp"].as<double>();
+    config.ki = pid_yaml["ki"].as<double>();
+    config.kd = pid_yaml["kd"].as<double>();
+    config.output_min = pid_yaml["output_limits"]["min"].as<double>();
+    config.output_max = pid_yaml["output_limits"]["max"].as<double>();
+}
+
+void ConfigReader::loadSimulationParams(SimulationConfig& config, const YAML::Node& sim_yaml) {
+    // Load simulation settings
+    config.dt = sim_yaml["simulation"]["dt"].as<double>();
+    config.total_time = sim_yaml["simulation"]["total_time"].as<double>();
+    config.num_drones = sim_yaml["simulation"]["num_drones"].as<int>();
+
+    // Load formation settings
+    config.formation_side_length = sim_yaml["formation"]["side_length"].as<double>();
+    
+    // Load initial positions
+    config.initial_positions.clear();
+    auto initial_pos = sim_yaml["formation"]["initial_positions"];
+    for (int i = 0; i < config.num_drones; ++i) {
+        std::string drone_key = "drone_" + std::to_string(i);
+        auto pos = initial_pos[drone_key].as<std::vector<double>>();
+        config.initial_positions.push_back({pos[0], pos[1]});
+    }
+
+    // Load phases
+    config.phases.clear();
+    for (const auto& phase : sim_yaml["phases"]) {
+        PhaseConfig phase_config;
+        phase_config.center = phase["center"].as<std::vector<double>>();
+        phase_config.start_time = phase["start_time"].as<double>();
+        config.phases.push_back(phase_config);
+    }
+
+    // Load wind settings
+    loadWindConfig(config, sim_yaml["wind"]);
+
+    // Load output settings
+    config.csv_enabled = sim_yaml["output"]["csv_enabled"].as<bool>();
+    config.csv_prefix = sim_yaml["output"]["csv_prefix"].as<std::string>();
+    config.console_output_enabled = sim_yaml["output"]["console_output"]["enabled"].as<bool>();
+    config.console_update_interval = sim_yaml["output"]["console_output"]["update_interval"].as<double>();
+}
+
+void ConfigReader::loadWindConfig(SimulationConfig& config, const YAML::Node& wind_node) {
+    config.wind_enabled = wind_node["enabled"].as<bool>();
+    config.wind_phases.clear();
+    
+    if (!config.wind_enabled) return;
+
+    for (const auto& phase : wind_node["phases"]) {
+        WindPhase wind_phase;
+        wind_phase.phase_number = phase["phase"].as<int>();
+        
+        for (const auto& window : phase["time_windows"]) {
+            WindTimeWindow time_window;
+            time_window.start_time = window["start"].as<double>();
+            time_window.end_time = window["end"].as<double>();
+            
+            auto force = window["force"].as<std::vector<double>>();
+            time_window.is_sine_wave = false;
+            
+            if (force.size() == 2 && force[0] == "sin") {
+                time_window.is_sine_wave = true;
+                time_window.force = {1.0, 0.0}; // Amplitude and offset for sine wave
+            } else {
+                time_window.force = force;
+            }
+            
+            wind_phase.time_windows.push_back(time_window);
+        }
+        
+        config.wind_phases.push_back(wind_phase);
+    }
+}
+
+} // namespace agent_control_pkg 
