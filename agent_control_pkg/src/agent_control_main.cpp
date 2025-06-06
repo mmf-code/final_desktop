@@ -220,8 +220,7 @@ T clamp(T value, T min, T max) {
 int main(int argc, char** argv) {
     (void)argc; (void)argv;
     agent_control_pkg::SimulationConfig config =
-        agent_control_pkg::ConfigReader::loadConfig("pid_params.yaml",
-                                                  "simulation_params.yaml");
+        agent_control_pkg::ConfigReader::loadConfig("simulation_params.yaml");
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
     const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
                                          // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
@@ -257,9 +256,9 @@ int main(int argc, char** argv) {
         kd = 0.0;  // Must be 0 for Z-N tuning
     } else {
         // Load gains from configuration file
-        kp = config.kp;
-        ki = config.ki;
-        kd = config.kd;
+        kp = config.pid_params.kp;
+        ki = config.pid_params.ki;
+        kd = config.pid_params.kd;
         std::cout << "Running with configured PID gains:" << std::endl;
         std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
         if (USE_FLS) {
@@ -269,8 +268,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    double output_min = config.output_min;
-    double output_max = config.output_max;
+    double output_min = config.pid_params.output_min;
+    double output_max = config.pid_params.output_max;
 
     // Initialize controllers with Z-N derived gains
     for (int i = 0; i < NUM_DRONES; ++i) {
@@ -295,7 +294,12 @@ int main(int argc, char** argv) {
                                (config.wind_enabled ? "_WIND_ON" : "_WIND_OFF") + ".csv";
     std::string metrics_file_name = std::string("performance_metrics") + (USE_FLS ? "_fls" : "_pid") +
                                    (config.wind_enabled ? "_wind" : "_nowind") + ".txt";
-    std::ofstream csv_file(csv_file_name);
+
+    std::filesystem::create_directories(config.output_directory);
+    std::filesystem::path csv_path = std::filesystem::path(config.output_directory) / csv_file_name;
+    std::filesystem::path metrics_path = std::filesystem::path(config.output_directory) / metrics_file_name;
+
+    std::ofstream csv_file(csv_path);
     if (!csv_file.is_open()) {
         std::cerr << "Error opening CSV file!" << std::endl;
         return 1;
@@ -316,9 +320,9 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
     // Open metrics file
     std::ofstream metrics_file;
     if (!ZN_TUNING_ACTIVE) { // Only create metrics file if not in P-only ZN step-by-step tuning
-        metrics_file.open(metrics_file_name);
+        metrics_file.open(metrics_path);
         if (!metrics_file.is_open()) {
-            std::cerr << "Error: Could not open metrics file: " << metrics_file_name << std::endl;
+            std::cerr << "Error: Could not open metrics file: " << metrics_path << std::endl;
             csv_file.close();  // Close CSV file before returning
             return 1;
         }
@@ -700,9 +704,9 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
     csv_file.close();
 
     std::cout << "\nSimulation complete. Data written to:\n"
-              << "- CSV data: " << csv_file_name << "\n";
+              << "- CSV data: " << csv_path.string() << "\n";
     if (!ZN_TUNING_ACTIVE) {
-        std::cout << "- Metrics: " << metrics_file_name << "\n";
+        std::cout << "- Metrics: " << metrics_path.string() << "\n";
     }
     std::cout << "Controller type used: " << controller_type_log_msg 
               << " (Kp=" << kp << ", Ki=" << ki << ", Kd=" << kd << ")" << std::endl;
