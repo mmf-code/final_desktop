@@ -5,6 +5,7 @@ simulation:
   dt: 0.05
   total_time: 120.0
   num_drones: 3
+fls_enabled: false
 
 # Formation Settings
 formation:

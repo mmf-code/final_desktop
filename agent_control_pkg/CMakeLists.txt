@@ -110,6 +110,7 @@ target_include_directories(pid_standalone_tester PRIVATE
 target_link_libraries(pid_standalone_tester PRIVATE
     pid_logic_lib
     fuzzy_logic_lib
+    config_reader_lib
 )
 
 # --- Executable for Fuzzy Logic standalone test ---
@@ -177,6 +178,7 @@ target_include_directories(multi_drone_pid_tester PRIVATE
 )
 target_link_libraries(multi_drone_pid_tester PRIVATE
     pid_logic_lib  # Link against your PID library
+    fuzzy_logic_lib  # Link against fuzzy logic library
     config_reader_lib  # Link against config reader library
     fuzzy_logic_lib
 )

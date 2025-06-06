@@ -2,6 +2,7 @@
 
 #include "../include/agent_control_pkg/pid_controller.hpp"         // PID class
 #include "../include/agent_control_pkg/gt2_fuzzy_logic_system.hpp" // FLS class
+#include "../include/agent_control_pkg/config_reader.hpp"
 #include <iostream>
 #include <vector>
 #include <iomanip>   // For std::fixed, std::setprecision, std::setw (if needed for formatting filenames)
@@ -217,16 +218,10 @@ T clamp(T value, T min, T max) {
 }
 
 int main(int argc, char** argv) {
-    bool use_fls_flag = false;
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--use-fls" || arg == "--enable-fls") {
-            use_fls_flag = true;
-        } else if (arg == "--help" || arg == "-h") {
-            std::cout << "Usage: " << argv[0] << " [--use-fls]" << std::endl;
-            return 0;
-        }
-    }
+    (void)argc; (void)argv;
+    agent_control_pkg::SimulationConfig config =
+        agent_control_pkg::ConfigReader::loadConfig("pid_params.yaml",
+                                                  "simulation_params.yaml");
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
     const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
                                          // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
@@ -237,11 +232,9 @@ int main(int argc, char** argv) {
     // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
 
     // Flag to control FLS usage
-    const bool USE_FLS = !ZN_TUNING_ACTIVE && use_fls_flag;
+    const bool USE_FLS = config.fls_enabled && !ZN_TUNING_ACTIVE;
 
-    const int NUM_DRONES = 3;
-    PIDParams pid_cfg;
-    loadPIDParams("pid_params.yaml", pid_cfg);
+    const int NUM_DRONES = config.num_drones;
     FuzzyParams fls_cfg;
     loadFuzzyParams("fuzzy_params.yaml", fls_cfg);
     std::vector<FakeDrone> drones(NUM_DRONES);
@@ -264,9 +257,9 @@ int main(int argc, char** argv) {
         kd = 0.0;  // Must be 0 for Z-N tuning
     } else {
         // Load gains from configuration file
-        kp = pid_cfg.kp;
-        ki = pid_cfg.ki;
-        kd = pid_cfg.kd;
+        kp = config.kp;
+        ki = config.ki;
+        kd = config.kd;
         std::cout << "Running with configured PID gains:" << std::endl;
         std::cout << "Kp = " << kp << ", Ki = " << ki << ", Kd = " << kd << std::endl;
         if (USE_FLS) {
@@ -276,14 +269,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    double output_min = pid_cfg.output_min;
-    double output_max = pid_cfg.output_max;
+    double output_min = config.output_min;
+    double output_max = config.output_max;
 
     // Initialize controllers with Z-N derived gains
     for (int i = 0; i < NUM_DRONES; ++i) {
-        // Initialize drone positions
-        drones[i].position_x = static_cast<double>(i) * 2.0 - 2.0;
-        drones[i].position_y = 0.0;
+        // Initialize drone positions from config
+        drones[i].position_x = config.initial_positions[i].first;
+        drones[i].position_y = config.initial_positions[i].second;
         
         // Initialize PID controllers
         pid_x_controllers.emplace_back(kp, ki, kd, output_min, output_max, 0.0);
@@ -296,29 +289,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    // --- File naming with controller type ---
-    std::string csv_file_name_suffix;
-    std::string metrics_file_name_suffix;
-    std::string controller_type_log_msg;
-
-    if (ZN_TUNING_ACTIVE) {
-        csv_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
-        metrics_file_name_suffix = "_zn_test_kp" + std::to_string(ZN_KP_TEST_VALUE);
-        controller_type_log_msg = "Z-N P-Only Test Controller";
-    } else {
-        if (USE_FLS) {
-            csv_file_name_suffix = "_pid_fls_zn";
-            metrics_file_name_suffix = "_pid_fls_zn";
-            controller_type_log_msg = "PID+FLS Controller with Z-N Gains";
-        } else {
-            csv_file_name_suffix = "_pid_only_zn_initial";
-            metrics_file_name_suffix = "_pid_only_zn_initial";
-            controller_type_log_msg = "PID-Only Controller with Initial Z-N Gains";
-        }
-    }
-
-    // Open CSV file for data logging
-    std::string csv_file_name = "multi_drone" + csv_file_name_suffix + "_sim_data.csv";
+    // --- File naming using config ---
+    std::string controller_type_log_msg = USE_FLS ? "PID+FLS Controller" : "PID-Only Controller";
+    std::string csv_file_name = config.csv_prefix + (USE_FLS ? "_FLS" : "_NOFLS") +
+                               (config.wind_enabled ? "_WIND_ON" : "_WIND_OFF") + ".csv";
+    std::string metrics_file_name = std::string("performance_metrics") + (USE_FLS ? "_fls" : "_pid") +
+                                   (config.wind_enabled ? "_wind" : "_nowind") + ".txt";
     std::ofstream csv_file(csv_file_name);
     if (!csv_file.is_open()) {
         std::cerr << "Error opening CSV file!" << std::endl;
@@ -338,7 +314,6 @@ for (int i = 0; i < NUM_DRONES; ++i) {
 csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what your Python script expects for wind columns
 
     // Open metrics file
-    std::string metrics_file_name = "performance_metrics" + metrics_file_name_suffix + ".txt";
     std::ofstream metrics_file;
     if (!ZN_TUNING_ACTIVE) { // Only create metrics file if not in P-only ZN step-by-step tuning
         metrics_file.open(metrics_file_name);
@@ -357,7 +332,7 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
 
     // --- Phase Management ---
     int current_phase = 1;
-    const int MAX_PHASES = 4; // Four distinct phases
+    const int MAX_PHASES = static_cast<int>(config.phases.size());
     std::vector<bool> phase_triggered(MAX_PHASES + 1, false); // To ensure each phase change happens once
 
     // --- Performance Metric Storage (Extended for more phases) ---
@@ -376,14 +351,20 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
     std::vector<std::vector<double>> time_entered_settling_y(num_metric_phases, std::vector<double>(NUM_DRONES, -1.0));
     const double SETTLING_PERCENTAGE = 0.02;
 
-    // Example: Store target values for different phases
-    std::vector<double> phase_target_center_x = {5.0, -5.0, 0.0, 5.0};  // Center X for phase 1, 2, 3, 4
-    std::vector<double> phase_target_center_y = {5.0,  0.0, -5.0, 0.0}; // Center Y for phase 1, 2, 3, 4
+    // Target centers loaded from config
+    std::vector<double> phase_target_center_x;
+    std::vector<double> phase_target_center_y;
+    std::vector<double> phase_start_times;
+    for (const auto& ph : config.phases) {
+        phase_target_center_x.push_back(ph.center[0]);
+        phase_target_center_y.push_back(ph.center[1]);
+        phase_start_times.push_back(ph.start_time);
+    }
 
     // Initialize drones, PIDs, FLSs, and initial metrics
     for (int i = 0; i < NUM_DRONES; ++i) {
-        drones[i].position_x = static_cast<double>(i) * 2.0 - 2.0;
-        drones[i].position_y = 0.0;
+        drones[i].position_x = config.initial_positions[i].first;
+        drones[i].position_y = config.initial_positions[i].second;
         pid_x_controllers[i].setSetpoint(target_values_x_per_phase[0][i]);
         pid_y_controllers[i].setSetpoint(target_values_y_per_phase[0][i]);
 
@@ -393,10 +374,10 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
         drone_metrics_y[i][0].reset(initial_values_y_per_phase[0][i]);
     }
 
-    // Define Formation (same as before)
-    double formation_center_x = 5.0;
-    double formation_center_y = 5.0;
-    double side_length = 4.0;
+    // Define Formation from config
+    double formation_center_x = config.phases[0].center[0];
+    double formation_center_y = config.phases[0].center[1];
+    double side_length = config.formation_side_length;
     std::vector<std::pair<double, double>> formation_offsets(NUM_DRONES);
     formation_offsets[0] = {0.0, (sqrt(3.0) / 2.0) * side_length * (2.0/3.0)};
     formation_offsets[1] = {-side_length / 2.0, -(sqrt(3.0) / 2.0) * side_length * (1.0/3.0)};
@@ -409,8 +390,8 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
         pid_y_controllers[i].setSetpoint(target_values_y_per_phase[0][i]);
     }
 
-    double dt = 0.05;
-    double simulation_time = 120.0; // Extended simulation time for more phases
+    double dt = config.dt;
+    double simulation_time = config.total_time; // Extended simulation time for more phases
 
     // --- Simulated Wind Conditions ***
     double simulated_wind_x = 0.0;
@@ -424,123 +405,36 @@ csv_file << ",SimWindX,SimWindY" << std::endl; // Make sure this matches what yo
         simulated_wind_x = 0.0;
         simulated_wind_y = 0.0;
 
-        if (!ZN_TUNING_ACTIVE) { // WIND IS OFF DURING ZN TUNING
-            // Phase 1 Winds (5-20s)
-            if (current_phase == 1) {
-                if (time_now >= 5.0 && time_now < 15.0) simulated_wind_x = 3.0;
-                if (time_now >= 10.0 && time_now < 20.0) simulated_wind_y = -1.0;
-            }
-            // Phase 2 Winds (35-50s)
-            else if (current_phase == 2) {
-                if (time_now >= 35.0 && time_now < 45.0) simulated_wind_x = -2.0;
-                if (time_now >= 40.0 && time_now < 50.0) simulated_wind_y = 1.5;
-            }
-            // Phase 3 Winds (65-75s) - Oscillating and gusty winds
-            else if (current_phase == 3) {
-                if (time_now >= 65.0 && time_now < 70.0) {
-                    simulated_wind_x = 1.0 * sin(time_now * 2.0); // Oscillating X wind
-                }
-                if (time_now >= 70.0 && time_now < 72.0) {
-                    simulated_wind_y = 4.0;  // Strong Y gust
-                } else if (time_now >= 72.0 && time_now < 75.0) {
-                    simulated_wind_y = -2.0; // Reverse Y gust
+        if (config.wind_enabled && !ZN_TUNING_ACTIVE) {
+            for (const auto& wp : config.wind_phases) {
+                if (wp.phase_number != current_phase) continue;
+                for (const auto& tw : wp.time_windows) {
+                    if (time_now >= tw.start_time && time_now < tw.end_time) {
+                        if (tw.is_sine_wave) {
+                            simulated_wind_x += std::sin(time_now * 2.0);
+                            if (tw.force.size() > 1) simulated_wind_y += tw.force[1];
+                        } else {
+                            if (!tw.force.empty()) simulated_wind_x += tw.force[0];
+                            if (tw.force.size() > 1) simulated_wind_y += tw.force[1];
+                        }
+                    }
                 }
             }
-            // Phase 4 Winds (95-105s) - Simultaneous strong X and Y
-            else if (current_phase == 4) {
-                if (time_now >= 95.0 && time_now < 105.0) {
-                    simulated_wind_x = 2.5;
-                    simulated_wind_y = -2.5;
-                }
-            }
-        } // End of "if (!ZN_TUNING_ACTIVE)" for wind
+        }
 
         // --- Phase Transitions and Target Changes ---
-        // Phase 1 to 2 Transition (30s)
-        if (time_now > 29.9 && current_phase == 1 && !phase_triggered[2]) {
-            std::cout << "---- Changing to PHASE 2: Target Center ("
-                      << phase_target_center_x[1] << ", " << phase_target_center_y[1] << ") ----\n";
-            current_phase = 2;
-            phase_triggered[2] = true;
-
-            formation_center_x = phase_target_center_x[current_phase - 1];
-            formation_center_y = phase_target_center_y[current_phase - 1];
-
-            int metric_idx = current_phase - 1; // metric_idx = 1 for phase 2
-
-            for (int i = 0; i < NUM_DRONES; ++i) {
-                // Store initial positions for this phase
-                initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
-                initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
-
-                // Calculate and store new target positions for this phase
-                target_values_x_per_phase[metric_idx][i] = formation_center_x + formation_offsets[i].first;
-                target_values_y_per_phase[metric_idx][i] = formation_center_y + formation_offsets[i].second;
-
-                // Update PID setpoints
-                pid_x_controllers[i].setSetpoint(target_values_x_per_phase[metric_idx][i]);
-                pid_y_controllers[i].setSetpoint(target_values_y_per_phase[metric_idx][i]);
-
-                // Reset metrics for this new phase
-                drone_metrics_x[i][metric_idx].reset(initial_values_x_per_phase[metric_idx][i]);
-                drone_metrics_y[i][metric_idx].reset(initial_values_y_per_phase[metric_idx][i]);
-
-                // Reset settling band trackers
-                in_settling_band_x[metric_idx][i] = false;
-                in_settling_band_y[metric_idx][i] = false;
-                time_entered_settling_x[metric_idx][i] = -1.0;
-                time_entered_settling_y[metric_idx][i] = -1.0;
-
-                // Reset error history
-                drones[i].prev_error_x = 0.0;
-                drones[i].prev_error_y = 0.0;
-                 pid_x_controllers[i].reset(); // Reset PID internal states on major setpoint change
-                 pid_y_controllers[i].reset(); 
-            }
+        int desired_phase = current_phase;
+        for (int p = MAX_PHASES; p >= 1; --p) {
+            if (time_now >= phase_start_times[p - 1]) { desired_phase = p; break; }
         }
-        // Phase 2 to 3 Transition (60s)
-        else if (time_now > 59.9 && current_phase == 2 && !phase_triggered[3]) {
-            std::cout << "---- Changing to PHASE 3: Target Center ("
-                      << phase_target_center_x[2] << ", " << phase_target_center_y[2] << ") ----\n";
-            current_phase = 3;
-            phase_triggered[3] = true;
+        if (desired_phase != current_phase) {
+            current_phase = desired_phase;
+            phase_triggered[current_phase] = true;
 
             formation_center_x = phase_target_center_x[current_phase - 1];
             formation_center_y = phase_target_center_y[current_phase - 1];
 
-            int metric_idx = current_phase - 1; // metric_idx = 2 for phase 3
-
-            for (int i = 0; i < NUM_DRONES; ++i) {
-                initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
-                initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
-                target_values_x_per_phase[metric_idx][i] = formation_center_x + formation_offsets[i].first;
-                target_values_y_per_phase[metric_idx][i] = formation_center_y + formation_offsets[i].second;
-                pid_x_controllers[i].setSetpoint(target_values_x_per_phase[metric_idx][i]);
-                pid_y_controllers[i].setSetpoint(target_values_y_per_phase[metric_idx][i]);
-                drone_metrics_x[i][metric_idx].reset(initial_values_x_per_phase[metric_idx][i]);
-                drone_metrics_y[i][metric_idx].reset(initial_values_y_per_phase[metric_idx][i]);
-                in_settling_band_x[metric_idx][i] = false;
-                in_settling_band_y[metric_idx][i] = false;
-                time_entered_settling_x[metric_idx][i] = -1.0;
-                time_entered_settling_y[metric_idx][i] = -1.0;
-                drones[i].prev_error_x = 0.0;
-                drones[i].prev_error_y = 0.0;
-                pid_x_controllers[i].reset(); 
-                pid_y_controllers[i].reset();
-            }
-        }
-        // Phase 3 to 4 Transition (90s)
-        else if (time_now > 89.9 && current_phase == 3 && !phase_triggered[4]) {
-            std::cout << "---- Changing to PHASE 4: Target Center ("
-                      << phase_target_center_x[3] << ", " << phase_target_center_y[3] << ") ----\n";
-            current_phase = 4;
-            phase_triggered[4] = true;
-
-            formation_center_x = phase_target_center_x[current_phase - 1];
-            formation_center_y = phase_target_center_y[current_phase - 1];
-
-            int metric_idx = current_phase - 1; // metric_idx = 3 for phase 4
-
+            int metric_idx = current_phase - 1;
             for (int i = 0; i < NUM_DRONES; ++i) {
                 initial_values_x_per_phase[metric_idx][i] = drones[i].position_x;
                 initial_values_y_per_phase[metric_idx][i] = drones[i].position_y;
