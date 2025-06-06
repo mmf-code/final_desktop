@@ -46,12 +46,20 @@ static std::vector<std::string> parseStringList_fuzzy_cfg(const std::string& in)
 
 
 std::string findConfigFilePath(const std::string& filename) {
+    // This list of candidate directories is searched in order.
     std::vector<std::filesystem::path> candidate_dirs = {
-        ".", // Current working directory
-        "config",
-        "../config",
-        "../../config",
-        "../../agent_control_pkg/config" // Common for out-of-source builds
+        ".", // Current working directory (e.g., build/Debug)
+        "config", // A 'config' folder inside the CWD
+        "../config", // For builds in a subdir like 'build', this finds a 'config' folder next to it
+        
+        // --- THIS IS THE KEY PATH TO ADD ---
+        // For running from a deep build folder like 'build/Debug', 
+        // this finds 'agent_control_pkg/config'
+        "../../../agent_control_pkg/config", 
+
+        // Original paths for completeness
+        "../../config", 
+        "../../agent_control_pkg/config" 
     };
 
     // Also check if filename is an absolute path
@@ -63,11 +71,14 @@ std::string findConfigFilePath(const std::string& filename) {
     for (const auto& dir : candidate_dirs) {
         std::filesystem::path full_path = dir / filename;
         if (std::filesystem::exists(full_path) && std::filesystem::is_regular_file(full_path)) {
-            return std::filesystem::weakly_canonical(full_path).string(); // Normalize
+            // Normalize the path for consistent output and to resolve ".."
+            return std::filesystem::weakly_canonical(full_path).string(); 
         }
     }
-    std::cerr << "WARNING: Config file '" << filename << "' not found in common candidate paths. Trying original path." << std::endl;
-    return filename; // Fallback
+    
+    // If we get here, the file was not found in any common location.
+    std::cerr << "WARNING: Config file '" << filename << "' not found in common candidate paths. Trying original path as a last resort." << std::endl;
+    return filename; // Fallback to the original filename
 }
 
 
@@ -78,6 +89,7 @@ SimulationConfig ConfigReader::loadConfig(const std::string& config_filepath) {
     YAML::Node root_node;
     try {
         root_node = YAML::LoadFile(actual_filepath);
+        std::cout << "Successfully loaded configuration from: " << actual_filepath << std::endl;
     } catch (const YAML::Exception& e) {
         std::cerr << "FATAL: Error loading YAML file '" << actual_filepath << "': " << e.what() << std::endl;
         std::cerr << "Using default configuration values for everything." << std::endl;
@@ -175,7 +187,7 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
                 }
             }
             // Ensure correct number of positions, even if some failed to load above
-            while(config.initial_positions.size() < config.num_drones) {
+            while(config.initial_positions.size() < (size_t)config.num_drones) {
                  config.initial_positions.push_back({0.0,0.0});
             }
         } else {
@@ -186,7 +198,7 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
     }
     
     // Fallback if loading failed entirely or not enough positions for num_drones
-    if (config.initial_positions.size() != config.num_drones && config.num_drones > 0) {
+    if (config.initial_positions.size() != (size_t)config.num_drones && config.num_drones > 0) {
         std::cout << "INFO: Initial positions count mismatch or load error. Generating default positions." << std::endl;
         config.initial_positions.clear();
         for(int i = 0; i < config.num_drones; ++i) {

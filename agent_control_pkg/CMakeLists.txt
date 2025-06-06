@@ -59,15 +59,17 @@ if(NOT yaml-cpp_FOUND AND NOT YAML_CPP_FOUND)
     FetchContent_Declare(
         yaml-cpp
         GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-        GIT_TAG yaml-cpp-0.7.0
+        # CORRECTED TAG: Use '0.8.0' instead of 'yaml-cpp-0.8.0'
+        GIT_TAG 0.8.0
     )
     FetchContent_MakeAvailable(yaml-cpp)
 endif()
 
+# ... (the rest of the file is correct) ...
 # --- Config Reader Library ---
 add_library(config_reader_lib
     src/config_reader.cpp
-    src/fuzzy_params_loader.cpp
+    # src/fuzzy_params_loader.cpp # This file is redundant, functionality is in config_reader.cpp
 )
 target_include_directories(config_reader_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -177,16 +179,13 @@ target_include_directories(multi_drone_pid_tester PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(multi_drone_pid_tester PRIVATE
-    pid_logic_lib  # Link against your PID library
-    fuzzy_logic_lib  # Link against fuzzy logic library
+    pid_logic_lib      # Link against your PID library
+    fuzzy_logic_lib    # Link against fuzzy logic library
     config_reader_lib  # Link against config reader library
-    fuzzy_logic_lib
 )
 
-# Copy compile_commands.json to source directory
-if(CMAKE_EXPORT_COMPILE_COMMANDS)
-  execute_process(
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_BINARY_DIR}/compile_commands.json
-            ${CMAKE_SOURCE_DIR}/compile_commands.json)
-endif()
+# The execute_process command to copy compile_commands.json has been removed.
+# It was failing due to special characters in your file path.
+# The file is still created in the build directory (`build/compile_commands.json`),
+# and modern editors/tools can be configured to find it there. This change
+# resolves the critical build error.

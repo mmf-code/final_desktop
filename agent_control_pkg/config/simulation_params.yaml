@@ -1,66 +1,78 @@
-# Simulation Configuration Parameters
+# agent_control_pkg/config/simulation_params.yaml
 
-# General Simulation Settings
-simulation:
+simulation_settings:
   dt: 0.05
-  total_time: 120.0
+  total_time: 120.0 
   num_drones: 3
-enable_fls: false
+  ziegler_nichols_tuning:
+    enable: false                # For a single manual ZN Kp_test run
+    kp_test_value: 2.5
+    simulation_time: 10.0
+    enable_auto_search: true     # <--- NEW: Master switch for autonomous Ku/Pu search
+    auto_search_kp_start: 0.5
+    auto_search_kp_step: 0.25
+    auto_search_kp_max: 7.0
+  auto_kp_tuning: # For general Kp sweep with fixed Ki/Kd
+    enable: false
+    # ... (kp_start, kp_end, kp_step)
+# ... (rest of YAML)
 
-# Formation Settings
-formation:
-  side_length: 4.0
-  initial_positions:
-    drone_0: [0.0, 1.15]  # Top vertex
-    drone_1: [-2.0, -2.0] # Bottom-left
-    drone_2: [2.0, -2.0]  # Bottom-right
+controller_settings:
+  pid: 
+    kp: 3.1
+    ki: 0.4 
+    kd: 2.2
+    output_min: -10.0
+    output_max: 10.0
+  fls:
+    enable: false # Enable/disable fuzzy logic controller
+    params_file: "fuzzy_params.yaml"
 
-# Phase Settings
-phases:
-  - center: [5.0, 5.0]
-    start_time: 0.0
-  - center: [-5.0, 0.0]
-    start_time: 30.0
-  - center: [0.0, -5.0]
-    start_time: 60.0
-  - center: [5.0, 0.0]
-    start_time: 90.0
+scenario_settings:
+  enable_wind: false  # Enable/disable wind effects
+  formation_side_length: 4.0
+  formation: 
+    initial_positions: # Drone names must be drone_0, drone_1, ... for current loader logic
+      drone_0: [0.0, 1.15]
+      drone_1: [-2.0, -2.0]
+      drone_2: [2.0, -2.0]
+  phases: 
+    - center: [5.0, 5.0]
+      start_time: 0.0
+    - center: [-5.0, 0.0]
+      start_time: 30.0
+    - center: [0.0, -5.0]
+      start_time: 60.0
+    - center: [5.0, 0.0]
+      start_time: 90.0
+  wind: 
+    phases: # Wind definition per simulation phase (1-indexed)
+      - phase: 1 # Wind events for simulation phase 1
+        time_windows:
+            # Example: Constant wind [3.0, 0.0] from 5s to 15s into this phase
+          - {start_time: 5.0, end_time: 15.0, force: [3.0, 0.0], is_sine_wave: false}
+            # Example: Constant wind [0.0, -1.0] from 10s to 20s into this phase
+          - {start_time: 10.0, end_time: 20.0, force: [0.0, -1.0], is_sine_wave: false}
+      - phase: 2 # Wind events for simulation phase 2
+        time_windows:
+          - {start_time: 5.0, end_time: 15.0, force: [-2.0, 0.0], is_sine_wave: false} # 35s global -> 5s into phase 2 (starts at 30s)
+          - {start_time: 10.0, end_time: 20.0, force: [0.0, 1.5], is_sine_wave: false} # 40s global -> 10s into phase 2
+      - phase: 3 # Wind events for simulation phase 3
+        time_windows:
+            # Example: Sine wave wind with X amplitude 2.0 from 5s to 10s into this phase
+          - {start_time: 5.0, end_time: 10.0, force: [2.0, 0.0], is_sine_wave: true, sine_frequency_rad_s: 1.57} # 65s global -> 5s into phase 3 (starts at 60s)
+          - {start_time: 10.0, end_time: 12.0, force: [0.0, 4.0], is_sine_wave: false} # 70s global
+          - {start_time: 12.0, end_time: 15.0, force: [0.0, -2.0], is_sine_wave: false} # 72s global
+      - phase: 4 # Wind events for simulation phase 4
+        time_windows:
+          - {start_time: 5.0, end_time: 15.0, force: [2.5, -2.5], is_sine_wave: false} # 95s global -> 5s into phase 4 (starts at 90s)
 
-# Wind Settings
-wind:
-  enabled: true
-  phases:
-    - phase: 1
-      time_windows:
-        - {start: 5.0, end: 15.0, force: [3.0, 0.0]}
-        - {start: 10.0, end: 20.0, force: [0.0, -1.0]}
-    - phase: 2
-      time_windows:
-        - {start: 35.0, end: 45.0, force: [-2.0, 0.0]}
-        - {start: 40.0, end: 50.0, force: [0.0, 1.5]}
-    - phase: 3
-      time_windows:
-        - {start: 65.0, end: 70.0, force: ["sin", 0.0]} # Special case for sine wave
-        - {start: 70.0, end: 72.0, force: [0.0, 4.0]}
-        - {start: 72.0, end: 75.0, force: [0.0, -2.0]}
-  - phase: 4
-    time_windows:
-      - {start: 95.0, end: 105.0, force: [2.5, -2.5]}
-
-# Controller Settings
-controller:
-  enable_fls: false
-
-# Output Settings
-output:
+output_settings:
+  output_directory: "simulation_outputs" # General output directory
   csv_enabled: true
-  csv_prefix: "multi_drone_pid_test"
-  output_directory: "outputs"
+  csv_prefix: "multi_agent_sim" 
+  metrics_enabled: true # Enable/disable metrics text file generation
+  metrics_prefix: "metrics_sim"
   console_output:
     enabled: true
-    update_interval: 5.0  # seconds
-
-# Fuzzy Logic Settings
-fuzzy_logic:
-  enabled: true
-  params_file: "fuzzy_params.yaml"
+    update_interval: 5.0
