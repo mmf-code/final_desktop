@@ -366,6 +366,27 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
               << " to " << params.auto_search_kp_max
               << " with step " << params.auto_search_kp_step << "\n\n";
 
+    // Prepare output directory and file for the tuning report
+    std::filesystem::path zn_dir =
+        std::filesystem::path(config.output_directory) / "zn_tuning";
+    try {
+        std::filesystem::create_directories(zn_dir);
+    } catch (const std::exception& e) {
+        std::cerr << "Filesystem error creating zn_tuning directory: "
+                  << e.what() << std::endl;
+    }
+    std::string timestamp = getCurrentTimestamp();
+    std::filesystem::path report_path =
+        zn_dir / (std::string("zn_auto_search_") + timestamp + ".txt");
+
+    std::ofstream report_file(report_path);
+    if (report_file.is_open()) {
+        report_file
+            << "Kp,OvershootPercent,SettlingTime2Percent,Stability\n";
+    } else {
+        std::cerr << "Could not open ZN report file: " << report_path << std::endl;
+    }
+
     double Ku = -1.0;
     double Pu = -1.0;
 
@@ -377,6 +398,19 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
         if (result.settling_time_2percent >= 0.0) std::cout << result.settling_time_2percent;
         else std::cout << "N/A";
         std::cout << "s -> ";
+
+        if (report_file.is_open()) {
+            report_file << kp << ','
+                        << std::fixed << std::setprecision(1)
+                        << result.overshoot_percent << ',';
+            if (result.settling_time_2percent >= 0.0)
+                report_file << result.settling_time_2percent;
+            else
+                report_file << "N/A";
+            report_file << ','
+                        << (result.is_unstable ? "Unstable" : "Stable")
+                        << '\n';
+        }
 
         if (result.is_unstable) {
             std::cout << "UNSTABLE. Sustained oscillations found.\n";
@@ -400,16 +434,29 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
         double Td = 0.125 * Pu;
         double final_ki = (Ti > 1e-9) ? (final_kp / Ti) : 0.0;
         double final_kd = final_kp * Td;
-        
+
         std::cout << "  Kp = " << final_kp << "\n";
         std::cout << "  Ki = " << final_ki << "\n";
         std::cout << "  Kd = " << final_kd << "\n\n";
         std::cout << "To use these, update the 'controller_settings' in your YAML file and disable all ZN tuning modes.\n";
+
+        if (report_file.is_open()) {
+            report_file << "\nKu," << Ku << "\nPu," << Pu << '\n';
+            report_file << "RecommendedKp," << final_kp << '\n';
+            report_file << "RecommendedKi," << final_ki << '\n';
+            report_file << "RecommendedKd," << final_kd << '\n';
+        }
     } else {
         std::cout << "Could not find Ku within the specified Kp range." << std::endl;
         std::cout << "Try increasing 'auto_search_kp_max' or decreasing 'auto_search_kp_step' in the YAML file." << std::endl;
+        if (report_file.is_open()) {
+            report_file << "\nKu,Not found\nPu,Not found\n";
+        }
     }
     std::cout << "============================================================\n";
+    if (report_file.is_open()) {
+        report_file.close();
+    }
 }
 
 int main() {
