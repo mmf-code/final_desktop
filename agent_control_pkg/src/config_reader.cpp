@@ -1,8 +1,8 @@
 #include "../include/agent_control_pkg/config_reader.hpp"
 #include <iostream>
-#include <fstream>   // For std::ifstream in loadFuzzyParamsYAML
-#include <sstream>   // For std::stringstream in loadFuzzyParamsYAML
-#include <filesystem> // For robust path finding
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 
 namespace agent_control_pkg {
 
@@ -51,13 +51,7 @@ std::string findConfigFilePath(const std::string& filename) {
         ".", // Current working directory (e.g., build/Debug)
         "config", // A 'config' folder inside the CWD
         "../config", // For builds in a subdir like 'build', this finds a 'config' folder next to it
-        
-        // --- THIS IS THE KEY PATH TO ADD ---
-        // For running from a deep build folder like 'build/Debug', 
-        // this finds 'agent_control_pkg/config'
-        "../../../agent_control_pkg/config", 
-
-        // Original paths for completeness
+        "../../../agent_control_pkg/config", // For running from 'build/Debug', finds 'agent_control_pkg/config'
         "../../config", 
         "../../agent_control_pkg/config" 
     };
@@ -71,14 +65,12 @@ std::string findConfigFilePath(const std::string& filename) {
     for (const auto& dir : candidate_dirs) {
         std::filesystem::path full_path = dir / filename;
         if (std::filesystem::exists(full_path) && std::filesystem::is_regular_file(full_path)) {
-            // Normalize the path for consistent output and to resolve ".."
             return std::filesystem::weakly_canonical(full_path).string(); 
         }
     }
     
-    // If we get here, the file was not found in any common location.
     std::cerr << "WARNING: Config file '" << filename << "' not found in common candidate paths. Trying original path as a last resort." << std::endl;
-    return filename; // Fallback to the original filename
+    return filename; // Fallback
 }
 
 
@@ -96,30 +88,11 @@ SimulationConfig ConfigReader::loadConfig(const std::string& config_filepath) {
         return config; // Return default config
     }
 
-    // Load each section, providing the relevant sub-node
-    if (root_node["simulation_settings"]) {
-        loadSimulationSettings(root_node["simulation_settings"], config);
-    } else {
-        std::cerr << "Warning: 'simulation_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-
-    if (root_node["controller_settings"]) {
-        loadControllerSettings(root_node["controller_settings"], config);
-    } else {
-        std::cerr << "Warning: 'controller_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-
-    if (root_node["scenario_settings"]) {
-        loadScenarioSettings(root_node["scenario_settings"], config);
-    } else {
-        std::cerr << "Warning: 'scenario_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
-    
-    if (root_node["output_settings"]) {
-        loadOutputSettings(root_node["output_settings"], config);
-    } else {
-        std::cerr << "Warning: 'output_settings' not found in " << actual_filepath << ". Using defaults for this section." << std::endl;
-    }
+    // Load each section
+    if (root_node["simulation_settings"]) { loadSimulationSettings(root_node["simulation_settings"], config); }
+    if (root_node["controller_settings"]) { loadControllerSettings(root_node["controller_settings"], config); }
+    if (root_node["scenario_settings"]) { loadScenarioSettings(root_node["scenario_settings"], config); }
+    if (root_node["output_settings"]) { loadOutputSettings(root_node["output_settings"], config); }
     
     return config;
 }
@@ -138,6 +111,12 @@ void ConfigReader::loadSimulationSettings(const YAML::Node& node, SimulationConf
         if (zn_node["enable"]) config.zn_tuning_params.enable = zn_node["enable"].as<bool>(config.zn_tuning_params.enable);
         if (zn_node["kp_test_value"]) config.zn_tuning_params.kp_test_value = zn_node["kp_test_value"].as<double>(config.zn_tuning_params.kp_test_value);
         if (zn_node["simulation_time"]) config.zn_tuning_params.simulation_time = zn_node["simulation_time"].as<double>(config.zn_tuning_params.simulation_time);
+        
+        // --- ADDED: Load auto-search parameters ---
+        if (zn_node["enable_auto_search"]) config.zn_tuning_params.enable_auto_search = zn_node["enable_auto_search"].as<bool>(config.zn_tuning_params.enable_auto_search);
+        if (zn_node["auto_search_kp_start"]) config.zn_tuning_params.auto_search_kp_start = zn_node["auto_search_kp_start"].as<double>(config.zn_tuning_params.auto_search_kp_start);
+        if (zn_node["auto_search_kp_step"]) config.zn_tuning_params.auto_search_kp_step = zn_node["auto_search_kp_step"].as<double>(config.zn_tuning_params.auto_search_kp_step);
+        if (zn_node["auto_search_kp_max"]) config.zn_tuning_params.auto_search_kp_max = zn_node["auto_search_kp_max"].as<double>(config.zn_tuning_params.auto_search_kp_max);
     }
 }
 
@@ -183,10 +162,9 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
                     });
                 } else {
                     std::cerr << "Warning: Initial position for " << drone_key << " missing/malformed. Using default (0,0) for it." << std::endl;
-                    config.initial_positions.push_back({0.0, 0.0}); // Add a default if specific one fails
+                    config.initial_positions.push_back({0.0, 0.0});
                 }
             }
-            // Ensure correct number of positions, even if some failed to load above
             while(config.initial_positions.size() < (size_t)config.num_drones) {
                  config.initial_positions.push_back({0.0,0.0});
             }
@@ -197,16 +175,13 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
          std::cerr << "Warning: 'formation.initial_positions' not found. Using default positions." << std::endl;
     }
     
-    // Fallback if loading failed entirely or not enough positions for num_drones
     if (config.initial_positions.size() != (size_t)config.num_drones && config.num_drones > 0) {
         std::cout << "INFO: Initial positions count mismatch or load error. Generating default positions." << std::endl;
         config.initial_positions.clear();
         for(int i = 0; i < config.num_drones; ++i) {
-            // A simple default: spread them out on X axis
             config.initial_positions.push_back({static_cast<double>(i) * 2.0 - (static_cast<double>(config.num_drones - 1) * 1.0), 0.0});
         }
     }
-
 
     if (node["phases"] && node["phases"].IsSequence()) {
         config.phases.clear();
@@ -221,7 +196,7 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
             if (phase_node["start_time"]) {
                 pc.start_time = phase_node["start_time"].as<double>();
             } else {
-                pc.start_time = 0.0; // Default if not specified
+                pc.start_time = 0.0;
             }
             config.phases.push_back(pc);
         }
@@ -255,7 +230,6 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
     }
 }
 
-
 void ConfigReader::loadOutputSettings(const YAML::Node& node, SimulationConfig& config) {
     if (!node.IsMap()) {
         std::cerr << "Warning: 'output_settings' node is not a map. Skipping." << std::endl;
@@ -274,9 +248,8 @@ void ConfigReader::loadOutputSettings(const YAML::Node& node, SimulationConfig& 
     }
 }
 
-// Implementation for loading fuzzy parameters (matches your multi_drone_pid_test_main.cpp style)
 bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp) {
-    std::string actual_filepath = findConfigFilePath(file_path); // Use the same path finding logic
+    std::string actual_filepath = findConfigFilePath(file_path);
     std::ifstream in(actual_filepath);
     if (!in.is_open()) {
         std::cerr << "Error: Could not open fuzzy params file: " << actual_filepath << std::endl;
@@ -285,7 +258,7 @@ bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp) {
     std::string line;
     std::string section;
     std::string current_var;
-    fp.sets.clear(); // Clear previous data
+    fp.sets.clear();
     fp.rules.clear();
 
     while (std::getline(in, line)) {
@@ -297,14 +270,12 @@ bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp) {
         if (section == "mf") {
             if (line.length() > 1 && line.back() == ':' && line.find_first_of(" \t") == std::string::npos) {
                 current_var = trim_fuzzy_cfg(line.substr(0, line.size() - 1));
-                fp.sets[current_var]; // Ensure the map entry for current_var exists
+                fp.sets[current_var];
                 continue;
             }
             if (current_var.empty()) {
-                 // std::cerr << "Warning: Fuzzy MF line encountered outside a variable block: " << line << std::endl;
                 continue;
             }
-
             auto pos = line.find(':');
             if (pos == std::string::npos) continue;
             std::string setname = trim_fuzzy_cfg(line.substr(0, pos));
@@ -320,8 +291,8 @@ bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp) {
                 std::cerr << "Warning: Fuzzy set '" << setname << "' for var '" << current_var << "' has incorrect number of params. Expected 6, got " << values.size() << std::endl;
             }
         } else if (section == "rules") {
-            if (line.rfind("- [", 0) == 0 && line.back() == ']') { // More robust rule parsing
-                auto tokens = parseStringList_fuzzy_cfg(line.substr(3, line.size() - 4)); // Extract content between "- [" and "]"
+            if (line.rfind("- [", 0) == 0 && line.back() == ']') {
+                auto tokens = parseStringList_fuzzy_cfg(line.substr(3, line.size() - 4));
                 if (tokens.size() == 4) {
                     fp.rules.push_back({tokens[0], tokens[1], tokens[2], tokens[3]});
                 } else {

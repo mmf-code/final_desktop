@@ -4,18 +4,21 @@ simulation_settings:
   dt: 0.05
   total_time: 120.0 
   num_drones: 3
+  
   ziegler_nichols_tuning:
-    enable: false                # For a single manual ZN Kp_test run
-    kp_test_value: 2.5
-    simulation_time: 10.0
-    enable_auto_search: true     # <--- NEW: Master switch for autonomous Ku/Pu search
+    # --- Manual Tuning Parameters ---
+    enable: false                # Set to true for a SINGLE manual Kp test
+    kp_test_value: 2.5           # The Kp to use for the manual test
+    
+    # --- Automated Ku/Pu Search Parameters ---
+    enable_auto_search: true     # MASTER SWITCH for the auto-tuner
     auto_search_kp_start: 0.5
     auto_search_kp_step: 0.25
-    auto_search_kp_max: 7.0
-  auto_kp_tuning: # For general Kp sweep with fixed Ki/Kd
-    enable: false
-    # ... (kp_start, kp_end, kp_step)
-# ... (rest of YAML)
+    auto_search_kp_max: 8.0
+    simulation_time: 15.0        # How long each test run in the auto-search should last
+
+# Note: The 'auto_kp_tuning' section has been removed as its functionality is
+# now fully covered by the 'ziegler_nichols_tuning' auto-search feature.
 
 controller_settings:
   pid: 

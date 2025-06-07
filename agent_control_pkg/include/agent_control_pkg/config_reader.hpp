@@ -21,31 +21,37 @@ struct SimPIDParams {
 };
 
 // Structure for individual phase configuration
-struct PhaseConfig { // Renamed from SimPhase for consistency
+struct PhaseConfig {
     std::vector<double> center; // {x, y}
     double start_time{0.0};
 };
 
 // Structure for wind time windows
-struct TimeWindow { // Renamed from WindTimeWindow
-    double start_time{0.0}; // Relative to the start of its parent simulation phase
-    double end_time{0.0};   // Relative to the start of its parent simulation phase
-    std::vector<double> force; // {wind_x_magnitude, wind_y_magnitude}
+struct TimeWindow {
+    double start_time{0.0};
+    double end_time{0.0};
+    std::vector<double> force; // {wind_x, wind_y}
     bool is_sine_wave{false};
-    double sine_frequency_rad_s{1.0}; // Default frequency if not specified for sine wave
+    double sine_frequency_rad_s{1.0};
 };
 
 // Structure for wind configuration per phase
-struct WindPhaseConfig { // Renamed from WindPhase
-    int phase_number{0}; // 1-indexed, refers to the Nth phase in SimulationConfig::phases
+struct WindPhaseConfig {
+    int phase_number{0}; // 1-indexed
     std::vector<TimeWindow> time_windows;
 };
 
 // Structure for Ziegler-Nichols tuning parameters
 struct ZNTuningParams {
-    bool enable{false};
+    bool enable{false}; // For single manual run
     double kp_test_value{1.0};
     double simulation_time{30.0};
+    
+    // Parameters for the automated search
+    bool enable_auto_search{false};
+    double auto_search_kp_start{0.5};
+    double auto_search_kp_step{0.25};
+    double auto_search_kp_max{10.0};
 };
 
 // Main simulation configuration structure
@@ -54,7 +60,7 @@ struct SimulationConfig {
     double dt{0.05};
     double total_time{120.0};
     int num_drones{3};
-    ZNTuningParams zn_tuning_params; // Z-N tuning parameters
+    ZNTuningParams zn_tuning_params;
 
     // Controller Settings
     SimPIDParams pid_params;
@@ -62,11 +68,11 @@ struct SimulationConfig {
     std::string fuzzy_params_file{"fuzzy_params.yaml"}; 
 
     // Scenario Settings
-    bool wind_enabled{false}; // Master switch for wind
+    bool wind_enabled{false};
     double formation_side_length{4.0};
     std::vector<std::pair<double, double>> initial_positions; 
     std::vector<PhaseConfig> phases;
-    std::vector<WindPhaseConfig> wind_phases; // Wind details per phase
+    std::vector<WindPhaseConfig> wind_phases;
 
     // Output Settings
     std::string output_directory{"simulation_outputs"};
@@ -84,25 +90,23 @@ public:
     static SimulationConfig loadConfig(const std::string& config_filepath);
 
 private:
-    // Helper methods for loading different sections of the config
     static void loadSimulationSettings(const YAML::Node& node, SimulationConfig& config);
     static void loadControllerSettings(const YAML::Node& node, SimulationConfig& config);
     static void loadScenarioSettings(const YAML::Node& node, SimulationConfig& config);
-    // Note: formation, phases, and wind are now typically loaded *within* loadScenarioSettings
     static void loadOutputSettings(const YAML::Node& node, SimulationConfig& config);
 };
 
-// For Fuzzy Params loading (defined here for completeness, matching your multi_drone_pid_test_main.cpp)
+// Structs for fuzzy parameter loading
 struct FuzzySetFOU { double l1, l2, l3, u1, u2, u3; };
 struct FuzzyParams {
     std::map<std::string, std::map<std::string, FuzzySetFOU>> sets;
     std::vector<std::array<std::string,4>> rules;
 };
 
-// Utility function to find config file path
+// Utility function to find config file paths
 std::string findConfigFilePath(const std::string& filename);
 
-// Declaration for loading fuzzy parameters (implementation will be in config_reader.cpp or fuzzy_loader.cpp)
+// Declaration for loading fuzzy parameters from a file
 bool loadFuzzyParamsYAML(const std::string& file_path, FuzzyParams& fp);
 
 } // namespace agent_control_pkg

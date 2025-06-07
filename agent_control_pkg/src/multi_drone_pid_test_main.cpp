@@ -1,24 +1,22 @@
-// agent_control_pkg/src/multi_drone_pid_test_main.cpp
 #include "../include/agent_control_pkg/pid_controller.hpp"
 #include "../include/agent_control_pkg/gt2_fuzzy_logic_system.hpp"
-#include "../include/agent_control_pkg/config_reader.hpp" // Uses the new ConfigReader
+#include "../include/agent_control_pkg/config_reader.hpp"
 #include <iostream>
 #include <vector>
 #include <iomanip>
 #include <cmath>
 #include <fstream>
 #include <string>
-#include <algorithm> // For std::clamp
-#include <sstream>   // For std::ostringstream
-#include <map>       // For FuzzyParams
-#include <array>     // For FuzzyParams
-#include <chrono>    // For timestamp generation
-#include <filesystem>// For directory creation
+#include <algorithm>
+#include <sstream>
+#include <map>
+#include <array>
+#include <chrono>
+#include <filesystem>
+#include <numeric>
 
 // --- Start: Local FLS helper structs and functions (specific to this main file) ---
 // These are kept local as per your original structure for this file.
-// If they were identical to what agent_control_main.cpp uses, they could be moved
-// to a common helper or into config_reader.cpp if loadFuzzyParamsYAML was part of ConfigReader class.
 struct FuzzySetFOU_Local {
     double l1, l2, l3, u1, u2, u3;
 };
@@ -62,7 +60,6 @@ static std::vector<std::string> parseStringList_local(const std::string& in) {
     return values;
 }
 
-// Uses the global findConfigFilePath from config_reader.hpp/cpp
 static bool loadFuzzyParamsLocal(const std::string& file, FuzzyParams_Local& fp) {
     std::string actual_path = agent_control_pkg::findConfigFilePath(file);
     std::ifstream in(actual_path);
@@ -82,13 +79,12 @@ static bool loadFuzzyParamsLocal(const std::string& file, FuzzyParams_Local& fp)
         if (line == "membership_functions:") { section = "mf"; current_var = ""; continue; }
         if (line == "rules:") { section = "rules"; current_var = ""; continue; }
         if (section == "mf") {
-            if (line.length() > 1 && line.back() == ':' && line.find_first_of(" \t") == std::string::npos) { // Check for valid var name
+            if (line.length() > 1 && line.back() == ':' && line.find_first_of(" \t") == std::string::npos) {
                 current_var = trim_local(line.substr(0, line.size() - 1));
-                fp.sets[current_var]; // Ensure the map entry for current_var exists
+                fp.sets[current_var];
                 continue;
             }
             if (current_var.empty()) {
-                // std::cerr << "Warning: Fuzzy MF line encountered outside a variable block: " << line << std::endl;
                 continue;
             }
             auto pos = line.find(':');
@@ -142,15 +138,15 @@ struct FakeDrone {
     double position_y = 0.0;
     double velocity_x = 0.0;
     double velocity_y = 0.0;
-    double prev_error_x_fls = 0.0; // For FLS dError calculation
-    double prev_error_y_fls = 0.0; // For FLS dError calculation
+    double prev_error_x_fls = 0.0;
+    double prev_error_y_fls = 0.0;
 
     void update(double accel_cmd_x, double accel_cmd_y, double dt,
                 double external_force_x = 0.0, double external_force_y = 0.0) {
         velocity_x += (accel_cmd_x + external_force_x) * dt;
         velocity_y += (accel_cmd_y + external_force_y) * dt;
-        velocity_x *= 0.98; // Simple drag
-        velocity_y *= 0.98; // Simple drag
+        velocity_x *= 0.98;
+        velocity_y *= 0.98;
         position_x += velocity_x * dt;
         position_y += velocity_y * dt;
     }
@@ -244,19 +240,16 @@ struct PerformanceMetrics {
         if (settling_time_2percent < 0.0 && in_settling_band) {
             settling_time_2percent = time_entered_settling_band;
         }
-        // Make times relative to phase start
         if (peak_time >= phase_start_time_for_relative_metrics) peak_time -= phase_start_time_for_relative_metrics; else peak_time = 0;
         if (settling_time_2percent >= phase_start_time_for_relative_metrics) settling_time_2percent -= phase_start_time_for_relative_metrics;
-        else if (settling_time_2percent >=0.0) settling_time_2percent = 0.0; // Settled at or before phase start
+        else if (settling_time_2percent >=0.0) settling_time_2percent = 0.0;
     }
 };
 
 // --- Custom Clamp Function ---
 template<typename T>
 T clamp(T value, T min_val, T max_val) {
-    if (value < min_val) return min_val;
-    if (value > max_val) return max_val;
-    return value;
+    return std::max(min_val, std::min(value, max_val));
 }
 
 // --- Timestamp for filenames ---
@@ -274,52 +267,130 @@ static std::string getCurrentTimestamp() {
     return oss.str();
 }
 
-// Function to setup default configuration if YAML fails
+// --- Function to setup default configuration if YAML fails ---
 agent_control_pkg::SimulationConfig get_default_simulation_config() {
-    std::cout << "WARNING: Using internal default simulation parameters for multi_drone_pid_test_main." << std::endl;
+    std::cout << "WARNING: Using internal default simulation parameters." << std::endl;
     agent_control_pkg::SimulationConfig defaultConfig;
-    // PID defaults are already set in SimPIDParams struct definition in config_reader.hpp
-
-    // Simulation settings
-    defaultConfig.dt = 0.05;
-    defaultConfig.total_time = 65.0; 
-    defaultConfig.num_drones = 1; // Default to 1 drone for simpler fallback
-
-    // ZN Tuning defaults (off by default)
-    defaultConfig.zn_tuning_params.enable = false;
-    defaultConfig.zn_tuning_params.kp_test_value = 1.0;
-    defaultConfig.zn_tuning_params.simulation_time = 30.0;
-
-    // Controller settings
-    defaultConfig.enable_fls = false;
-    defaultConfig.fuzzy_params_file = "fuzzy_params.yaml";
-
-    // Scenario settings
-    defaultConfig.wind_enabled = false;
-    defaultConfig.formation_side_length = 4.0; // Less relevant for 1 drone default
-
-    // Default initial positions for 1 drone
     defaultConfig.initial_positions.push_back({0.0,0.0});
-
-    // Default phases for 1 drone
-    defaultConfig.phases.push_back({{5.0,0.0}, 0.0}); // Target (5,0), starts at t=0
-    defaultConfig.total_time = 15.0; // Shorter for single drone default
-
-    // Default Wind (empty, as wind_enabled is false)
-    // defaultConfig.wind_phases already default empty
-
-    // Output settings
-    defaultConfig.output_directory = "simulation_outputs_default";
-    defaultConfig.csv_enabled = true;
-    defaultConfig.csv_prefix = "multi_drone_test_DEFAULT";
-    defaultConfig.metrics_enabled = true;
-    defaultConfig.metrics_prefix = "metrics_DEFAULT";
-    defaultConfig.console_output_enabled = true;
-    defaultConfig.console_update_interval = 1.0;
-
+    defaultConfig.phases.push_back({{5.0,0.0}, 0.0});
+    defaultConfig.total_time = 15.0;
     return defaultConfig;
 }
 
+// --- NEW: Struct to hold the analysis result of a single ZN simulation ---
+struct ZN_AnalysisResult {
+    bool is_unstable = false;
+    bool is_oscillating = false;
+    double period = 0.0;
+};
+
+// --- NEW: Function to analyze error history for oscillations ---
+ZN_AnalysisResult analyze_for_oscillations(const std::vector<std::pair<double, double>>& error_history) {
+    std::vector<double> peaks;
+    std::vector<double> peak_times;
+    const double start_analysis_time = 2.0; // Ignore initial transient
+
+    for (size_t i = 1; i < error_history.size() - 1; ++i) {
+        double current_time = error_history[i].first;
+        double current_error = error_history[i].second;
+        if (current_time < start_analysis_time) continue;
+
+        // Find a peak (local maximum of absolute error that crosses zero)
+        if (std::abs(current_error) > std::abs(error_history[i - 1].second) && 
+            std::abs(current_error) > std::abs(error_history[i + 1].second)) {
+            // Check that it's a true zero-crossing peak
+            if ( (current_error > 0 && error_history[i-1].second <= 0) || 
+                 (current_error < 0 && error_history[i-1].second >= 0) || peaks.empty() ) {
+                peaks.push_back(std::abs(current_error));
+                peak_times.push_back(current_time);
+            }
+        }
+    }
+
+    if (peaks.size() < 3) {
+        return {false, !peaks.empty(), 0.0}; // Not enough peaks to determine stability
+    }
+    
+    // Check if system is unstable by comparing the last two valid peaks
+    double last_peak = peaks.back();
+    double second_last_peak = peaks[peaks.size() - 2];
+    
+    // If the last peak's amplitude is greater than the previous one, it's unstable
+    if (last_peak > second_last_peak) {
+        double estimated_period = peak_times.back() - peak_times[peak_times.size() - 2];
+        return {true, true, estimated_period};
+    }
+
+    return {false, true, 0.0}; // Oscillating but stable
+}
+
+// --- NEW: Function to run a single, simplified simulation for ZN auto-search ---
+ZN_AnalysisResult run_single_zn_simulation(double kp_test, const agent_control_pkg::SimulationConfig& config) {
+    FakeDrone drone;
+    drone.position_x = 0.0;
+    agent_control_pkg::PIDController pid_x(kp_test, 0.0, 0.0, -10.0, 10.0, 5.0); // Fixed step input
+
+    std::vector<std::pair<double, double>> error_history;
+    double dt = config.dt;
+    
+    for (double t = 0; t <= config.zn_tuning_params.simulation_time; t += dt) {
+        double error = pid_x.getSetpoint() - drone.position_x;
+        error_history.push_back({t, error});
+        double cmd = pid_x.calculate(drone.position_x, dt);
+        drone.update(cmd, 0.0, dt);
+    }
+
+    return analyze_for_oscillations(error_history);
+}
+
+// --- NEW: Main function for the automated ZN search ---
+void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
+    std::cout << "\n=========== STARTING ZIEGLER-NICHOLS AUTO-SEARCH ===========\n";
+    const auto& params = config.zn_tuning_params;
+    std::cout << "Searching for Ku with Kp from " << params.auto_search_kp_start
+              << " to " << params.auto_search_kp_max
+              << " with step " << params.auto_search_kp_step << "\n\n";
+
+    double Ku = -1.0;
+    double Pu = -1.0;
+
+    for (double kp = params.auto_search_kp_start; kp <= params.auto_search_kp_max; kp += params.auto_search_kp_step) {
+        std::cout << "Testing Kp = " << std::fixed << std::setprecision(3) << kp << " ... ";
+        ZN_AnalysisResult result = run_single_zn_simulation(kp, config);
+
+        if (result.is_unstable) {
+            std::cout << "UNSTABLE. Sustained oscillations found.\n";
+            Ku = kp;
+            Pu = result.period;
+            break;
+        } else if (result.is_oscillating) {
+            std::cout << "Stable oscillations.\n";
+        } else {
+            std::cout << "No oscillations.\n";
+        }
+    }
+
+    std::cout << "\n==================== AUTO-SEARCH COMPLETE ====================\n";
+    if (Ku > 0 && Pu > 0) {
+        std::cout << "Found Ultimate Gain (Ku) = " << Ku << "\n";
+        std::cout << "Found Ultimate Period (Pu) = " << Pu << " s\n\n";
+        std::cout << "Recommended PID Gains (Classic Ziegler-Nichols):\n";
+        double final_kp = 0.6 * Ku;
+        double Ti = 0.5 * Pu;
+        double Td = 0.125 * Pu;
+        double final_ki = (Ti > 1e-9) ? (final_kp / Ti) : 0.0;
+        double final_kd = final_kp * Td;
+        
+        std::cout << "  Kp = " << final_kp << "\n";
+        std::cout << "  Ki = " << final_ki << "\n";
+        std::cout << "  Kd = " << final_kd << "\n\n";
+        std::cout << "To use these, update the 'controller_settings' in your YAML file and disable all ZN tuning modes.\n";
+    } else {
+        std::cout << "Could not find Ku within the specified Kp range." << std::endl;
+        std::cout << "Try increasing 'auto_search_kp_max' or decreasing 'auto_search_kp_step' in the YAML file." << std::endl;
+    }
+    std::cout << "============================================================\n";
+}
 
 int main() {
     // --- Load Configuration ---
@@ -327,74 +398,47 @@ int main() {
     bool config_loaded_successfully = false;
     try {
         config = agent_control_pkg::ConfigReader::loadConfig("simulation_params.yaml");
-        config_loaded_successfully = true; 
-        if (config.phases.empty() && config.num_drones > 0 && !config.zn_tuning_params.enable) {
-            std::cerr << "Warning: Main config loaded but phases are empty for a normal run. Consider defaults or check YAML." << std::endl;
-        }
-    } catch (const YAML::Exception& e) {
-        std::cerr << "YAML parsing error loading main configuration: " << e.what() << std::endl;
-    } catch (const std::runtime_error& e) {
-        std::cerr << "Runtime error loading main configuration: " << e.what() << std::endl;
+        config_loaded_successfully = true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error during configuration loading: " << e.what() << std::endl;
     }
-
     if (!config_loaded_successfully) {
-        std::cout << "Configuration loading failed or was incomplete. Using internal defaults." << std::endl;
         config = get_default_simulation_config();
     }
+    
+    // --- MODE SELECTION ---
+    if (config.zn_tuning_params.enable_auto_search) {
+        run_zn_auto_search(config);
+        return 0; // Exit after auto-search
+    }
 
-    // >>> ZIEGLER-NICHOLS TUNING PARAMETERS (from config) <<<
     const bool ZN_TUNING_ACTIVE = config.zn_tuning_params.enable;
     const double ZN_KP_TEST_VALUE = config.zn_tuning_params.kp_test_value;
     const double ZN_SIMULATION_TIME = config.zn_tuning_params.simulation_time;
-    // >>> END ZIEGLER-NICHOLS TUNING SECTION <<<
 
-    FuzzyParams_Local fls_yaml_params_local; // Use the local struct for this file
+    FuzzyParams_Local fls_yaml_params_local;
     bool fls_should_be_enabled = config.enable_fls && !ZN_TUNING_ACTIVE; 
     if (fls_should_be_enabled) {
-        if (!loadFuzzyParamsLocal(config.fuzzy_params_file, fls_yaml_params_local)) { // Use the local loader
-            std::cerr << "Failed to load FLS params from: " << config.fuzzy_params_file
-                      << ". Disabling FLS for this run." << std::endl;
+        if (!loadFuzzyParamsLocal(config.fuzzy_params_file, fls_yaml_params_local)) {
+            std::cerr << "Failed to load FLS params. Disabling FLS for this run." << std::endl;
             fls_should_be_enabled = false;
         }
     }
 
-    // --- Use loaded/default config values ---
-    double kp_config = config.pid_params.kp;
-    double ki_config = config.pid_params.ki;
-    double kd_config = config.pid_params.kd;
-    double output_min = config.pid_params.output_min;
-    double output_max = config.pid_params.output_max;
-
     double kp_actual, ki_actual, kd_actual; 
-
     if (ZN_TUNING_ACTIVE) {
-        std::cout << "!!!!!!!! ZIEGLER-NICHOLS Ku/Pu FINDING MODE ACTIVE (from config) !!!!!!!!" << std::endl;
-        std::cout << "Testing with Kp = " << ZN_KP_TEST_VALUE << ", Ki = 0, Kd = 0" << std::endl;
-        std::cout << "Observe Drone 0 X-axis for sustained oscillations on the first setpoint change." << std::endl;
         kp_actual = ZN_KP_TEST_VALUE;
         ki_actual = 0.0;
         kd_actual = 0.0;
-        fls_should_be_enabled = false; 
-        config.wind_enabled = false;   // Effective wind status for ZN run
-        
-        if (config.phases.empty()) {
-            std::cout << "Z-N Tuning: No phases in config, adding a default step phase: Target (5,0) at t=0." << std::endl;
-            config.phases.push_back({{5.0, 0.0}, 0.0}); 
-        } else if (config.phases[0].start_time != 0.0) {
-            std::cout << "Z-N Tuning: Forcing first phase to start at t=0 for immediate step response." << std::endl;
-            config.phases[0].start_time = 0.0;
-        }
-        // For ZN, we might only care about the first phase for ZN_SIMULATION_TIME
-        // If ZN_SIMULATION_TIME is shorter than the first phase's implicit duration, that's fine.
-        // If ZN_SIMULATION_TIME is longer, it might go into subsequent configured phases, which is usually not intended for simple Ku/Pu finding.
-        // Consider making it so ZN mode only uses the first configured phase.
-        // For now, it will run for ZN_SIMULATION_TIME and process phases that fall within that time.
-
     } else {
-        kp_actual = kp_config;
-        ki_actual = ki_config;
-        kd_actual = kd_config;
-        std::cout << "Running with configured PID gains: Kp=" << kp_actual << ", Ki=" << ki_actual << ", Kd=" << kd_actual << std::endl;
+        kp_actual = config.pid_params.kp;
+        ki_actual = config.pid_params.ki;
+        kd_actual = config.pid_params.kd;
+    }
+
+    if (config.phases.empty() && !ZN_TUNING_ACTIVE) {
+        std::cerr << "Warning: No phases defined for a normal run. Exiting." << std::endl;
+        return 1;
     }
 
     const int NUM_DRONES = config.num_drones > 0 ? config.num_drones : 1;
@@ -403,71 +447,60 @@ int main() {
     bool ENABLE_WIND_ACTUAL = config.wind_enabled && !ZN_TUNING_ACTIVE; 
     bool USE_FLS_ACTUAL = fls_should_be_enabled;
 
-    // --- Initialize Drones ---
     std::vector<FakeDrone> drones(NUM_DRONES);
-    if (config.initial_positions.size() >= NUM_DRONES) {
+    if (config.initial_positions.size() >= (size_t)NUM_DRONES) {
         for (int i = 0; i < NUM_DRONES; ++i) {
             drones[i].position_x = config.initial_positions[i].first;
             drones[i].position_y = config.initial_positions[i].second;
         }
     } else {
-        std::cerr << "Warning: Insufficient initial_positions in config for " << NUM_DRONES << " drones. Using default staggered positions." << std::endl;
+        std::cerr << "Warning: Insufficient initial_positions. Using default staggered positions." << std::endl;
         for(int i=0; i < NUM_DRONES; ++i) {
             drones[i].position_x = static_cast<double>(i) * 1.0; drones[i].position_y = 0.0;
         }
     }
 
-    // --- PID & FLS Controllers ---
     std::vector<agent_control_pkg::PIDController> pid_x_controllers;
     std::vector<agent_control_pkg::PIDController> pid_y_controllers;
     std::vector<agent_control_pkg::GT2FuzzyLogicSystem> fls_x_controllers_vec(NUM_DRONES);
     std::vector<agent_control_pkg::GT2FuzzyLogicSystem> fls_y_controllers_vec(NUM_DRONES);
 
     for (int i = 0; i < NUM_DRONES; ++i) {
-        pid_x_controllers.emplace_back(kp_actual, ki_actual, kd_actual, output_min, output_max, drones[i].position_x);
-        pid_y_controllers.emplace_back(kp_actual, ki_actual, kd_actual, output_min, output_max, drones[i].position_y);
+        pid_x_controllers.emplace_back(kp_actual, ki_actual, kd_actual, config.pid_params.output_min, config.pid_params.output_max, drones[i].position_x);
+        pid_y_controllers.emplace_back(kp_actual, ki_actual, kd_actual, config.pid_params.output_min, config.pid_params.output_max, drones[i].position_y);
         if (USE_FLS_ACTUAL) {
-            applyFuzzyParamsLocal(fls_x_controllers_vec[i], fls_yaml_params_local); // Use local FLS params
+            applyFuzzyParamsLocal(fls_x_controllers_vec[i], fls_yaml_params_local);
             applyFuzzyParamsLocal(fls_y_controllers_vec[i], fls_yaml_params_local);
         }
     }
 
-    // --- Formation Definition ---
-    double formation_side_length = config.formation_side_length;
     std::vector<std::pair<double, double>> formation_offsets(NUM_DRONES);
-    if (NUM_DRONES > 0) formation_offsets[0] = {0.0, (sqrt(3.0) / 3.0) * formation_side_length};
-    if (NUM_DRONES > 1) formation_offsets[1] = {-formation_side_length / 2.0, -(sqrt(3.0) / 6.0) * formation_side_length};
-    if (NUM_DRONES > 2) formation_offsets[2] = {formation_side_length / 2.0, -(sqrt(3.0) / 6.0) * formation_side_length};
-    for(int i=3; i < NUM_DRONES; ++i) formation_offsets[i] = {0.0, 0.0}; // Default for >3 drones
+    if (NUM_DRONES > 0) formation_offsets[0] = {0.0, (sqrt(3.0) / 3.0) * config.formation_side_length};
+    if (NUM_DRONES > 1) formation_offsets[1] = {-config.formation_side_length / 2.0, -(sqrt(3.0) / 6.0) * config.formation_side_length};
+    if (NUM_DRONES > 2) formation_offsets[2] = {config.formation_side_length / 2.0, -(sqrt(3.0) / 6.0) * config.formation_side_length};
+    for(int i=3; i < NUM_DRONES; ++i) formation_offsets[i] = {0.0, 0.0};
 
-    // --- Phase Management & Targets ---
     const int MAX_PHASES_FROM_CONFIG = static_cast<int>(config.phases.size());
     int current_phase_idx = -1; 
-
-    // --- Performance Metrics Storage ---
-    int num_metric_phases = std::max(1, MAX_PHASES_FROM_CONFIG); // Ensure at least one phase for metrics
+    int num_metric_phases = std::max(1, MAX_PHASES_FROM_CONFIG);
     std::vector<std::vector<PerformanceMetrics>> drone_metrics_x(NUM_DRONES, std::vector<PerformanceMetrics>(num_metric_phases));
     std::vector<std::vector<PerformanceMetrics>> drone_metrics_y(NUM_DRONES, std::vector<PerformanceMetrics>(num_metric_phases));
     std::vector<bool> phase_has_been_active(num_metric_phases, false);
     std::vector<double> phase_actual_start_times(num_metric_phases, 0.0);
 
-
     // --- File Naming & Output ---
     std::string timestamp = getCurrentTimestamp();
     std::string base_filename_prefix_val = ZN_TUNING_ACTIVE ? "zn_test" : config.csv_prefix;
-    std::string directory_path_str = config.output_directory; // Base output directory
+    std::string directory_path_str = config.output_directory;
     if (ZN_TUNING_ACTIVE) { 
-        directory_path_str += "/zn_tuning"; // Optional: Subfolder for ZN results
+        directory_path_str += "/zn_tuning";
     }
-
     std::filesystem::path output_dir_path(directory_path_str);
-     try {
-        if (!std::filesystem::exists(output_dir_path)) {
-            std::filesystem::create_directories(output_dir_path);
-        }
-    } catch (const std::filesystem::filesystem_error& fs_err) {
-        std::cerr << "Filesystem error creating directory " << output_dir_path.string() << ": " << fs_err.what() << std::endl;
-        output_dir_path = "."; // Fallback to current directory
+    try {
+        std::filesystem::create_directories(output_dir_path);
+    } catch (const std::exception& e) {
+        std::cerr << "Filesystem error creating directory: " << e.what() << std::endl;
+        output_dir_path = ".";
     }
 
     std::ostringstream oss_filename_suffix;
@@ -481,44 +514,36 @@ int main() {
     oss_filename_suffix << (USE_FLS_ACTUAL ? "_FLS_ON" : "_FLS_OFF")
                         << (ENABLE_WIND_ACTUAL ? "_WIND_ON" : "_WIND_OFF")
                         << "_" << timestamp;
-
+    
     std::filesystem::path csv_filepath = output_dir_path / (base_filename_prefix_val + oss_filename_suffix.str() + ".csv");
-    std::filesystem::path metrics_filepath = output_dir_path / ( (ZN_TUNING_ACTIVE ? "zn_metrics_info" : config.metrics_prefix) + oss_filename_suffix.str() + ".txt");
+    std::filesystem::path metrics_filepath = output_dir_path / ((ZN_TUNING_ACTIVE ? "zn_metrics_info" : config.metrics_prefix) + oss_filename_suffix.str() + ".txt");
     
     std::ofstream csv_file;
     if (config.csv_enabled) {
         csv_file.open(csv_filepath);
-        if (!csv_file.is_open()) {
-            std::cerr << "Error opening CSV file: " << csv_filepath.string() << std::endl;
-            // config.csv_enabled = false; // Or handle error differently
-        } else {
+        if (csv_file.is_open()) {
             csv_file << "Time";
             for (int i = 0; i < NUM_DRONES; ++i) {
-                csv_file << ",TargetX" << i << ",CurrentX" << i << ",ErrorX" << i << ",PIDOutX" << i
-                         << ",FLSCorrX" << i << ",FinalCmdX" << i
-                         << ",PTermX" << i << ",ITermX" << i << ",DTermX" << i
-                         << ",TargetY" << i << ",CurrentY" << i << ",ErrorY" << i << ",PIDOutY" << i
-                         << ",FLSCorrY" << i << ",FinalCmdY" << i
-                         << ",PTermY" << i << ",ITermY" << i << ",DTermY" << i;
+                csv_file << ",TargetX" << i << ",CurrentX" << i << ",ErrorX" << i << ",PIDOutX" << i << ",FLSCorrX" << i << ",FinalCmdX" << i << ",PTermX" << i << ",ITermX" << i << ",DTermX" << i
+                         << ",TargetY" << i << ",CurrentY" << i << ",ErrorY" << i << ",PIDOutY" << i << ",FLSCorrY" << i << ",FinalCmdY" << i << ",PTermY" << i << ",ITermY" << i << ",DTermY" << i;
             }
             if (ENABLE_WIND_ACTUAL) csv_file << ",SimWindX,SimWindY";
             csv_file << "\n";
+        } else {
+            std::cerr << "Error opening CSV file: " << csv_filepath.string() << std::endl;
         }
     }
 
     std::ofstream metrics_file_stream;
     if (config.metrics_enabled && !ZN_TUNING_ACTIVE) { 
         metrics_file_stream.open(metrics_filepath);
-        if(!metrics_file_stream.is_open()){
-            std::cerr << "Error opening metrics file: " << metrics_filepath.string() << std::endl;
-            // config.metrics_enabled = false; // Or handle error
-        } else {
-            metrics_file_stream << "Simulation Metrics for: " << base_filename_prefix_val + oss_filename_suffix.str() << "\n";
+        if(metrics_file_stream.is_open()){
+            metrics_file_stream << "Simulation Metrics for: " << (base_filename_prefix_val + oss_filename_suffix.str()) << "\n";
             metrics_file_stream << "PID Gains: Kp=" << kp_actual << ", Ki=" << ki_actual << ", Kd=" << kd_actual << "\n";
             metrics_file_stream << "FLS: " << (USE_FLS_ACTUAL ? "ON" : "OFF") << ", Wind: " << (ENABLE_WIND_ACTUAL ? "ON" : "OFF") << "\n";
             metrics_file_stream << "=======================================================================\n";
         }
-    } else if (ZN_TUNING_ACTIVE) { // Create a simple info file for ZN runs
+    } else if (ZN_TUNING_ACTIVE) {
          metrics_file_stream.open(metrics_filepath);
          if(metrics_file_stream.is_open()){
             metrics_file_stream << "Ziegler-Nichols Tuning Run Information\n";
@@ -529,42 +554,39 @@ int main() {
             metrics_file_stream << "Objective: Observe Drone 0 X-axis for sustained oscillations after first setpoint change.\n";
          }
     }
-
-
-    std::cout << "Starting Multi-Drone Test..." << std::endl;
-    std::cout << " Config File: " << (config_loaded_successfully ? "simulation_params.yaml (Loaded)" : "Internal Defaults Used") << std::endl;
+    
+    // --- Simulation Start & Main Loop ---
+    std::cout << "Starting simulation..." << std::endl;
     if (ZN_TUNING_ACTIVE) {
-         std::cout << " Z-N Kp_test = " << ZN_KP_TEST_VALUE << std::endl;
+        std::cout << "!!!!!!!! ZIEGLER-NICHOLS Ku/Pu FINDING MODE ACTIVE (from config) !!!!!!!!" << std::endl;
+        std::cout << "Testing with Kp = " << ZN_KP_TEST_VALUE << ", Ki = 0, Kd = 0" << std::endl;
     } else {
-        std::cout << " PID Gains: Kp=" << kp_actual << ", Ki=" << ki_actual << ", Kd=" << kd_actual << std::endl;
-        std::cout << " FLS: " << (USE_FLS_ACTUAL ? "ON" : "OFF") << std::endl;
-        std::cout << " Wind: " << (ENABLE_WIND_ACTUAL ? "ON" : "OFF") << std::endl;
+        std::cout << "Running with configured PID gains: Kp=" << kp_actual << ", Ki=" << ki_actual << ", Kd=" << kd_actual << std::endl;
     }
-    if(config.csv_enabled && csv_file.is_open()) std::cout << " CSV Output: " << csv_filepath.string() << std::endl;
-    if(metrics_file_stream.is_open()) std::cout << " Metrics/Info Output: " << metrics_filepath.string() << std::endl;
-
+    std::cout << "FLS: " << (USE_FLS_ACTUAL ? "ON" : "OFF") << ", Wind: " << (ENABLE_WIND_ACTUAL ? "ON" : "OFF") << std::endl;
+    if (config.csv_enabled && csv_file.is_open()) std::cout << "CSV Output: " << csv_filepath.string() << std::endl;
+    if (metrics_file_stream.is_open()) std::cout << "Metrics/Info Output: " << metrics_filepath.string() << std::endl;
+    
     double simulated_wind_x = 0.0;
     double simulated_wind_y = 0.0;
     double last_console_print_time = -config.console_update_interval; 
 
-    for (double time_now = 0.0; time_now <= simulation_time_actual + dt/2.0; time_now += dt) { // Loop slightly past to include endpoint
-        // --- Phase Transition Logic ---
+    if (ZN_TUNING_ACTIVE && config.phases.empty()){
+        config.phases.push_back({{5.0, 0.0}, 0.0});
+    }
+
+    for (double time_now = 0.0; time_now <= simulation_time_actual + dt/2.0; time_now += dt) {
         int new_phase_idx_candidate = current_phase_idx;
-        if (!config.phases.empty()) { // Only if phases are defined
-            for (int p_cfg_idx = MAX_PHASES_FROM_CONFIG - 1; p_cfg_idx >= 0; --p_cfg_idx) {
+        if (!config.phases.empty()) {
+            for (int p_cfg_idx = (int)config.phases.size() - 1; p_cfg_idx >= 0; --p_cfg_idx) {
                 if (time_now >= config.phases[p_cfg_idx].start_time - dt/2.0) { 
                     new_phase_idx_candidate = p_cfg_idx;
                     break;
                 }
             }
-        } else if (current_phase_idx == -1 && ZN_TUNING_ACTIVE) { // Default phase for ZN if config.phases was empty
-            new_phase_idx_candidate = 0; 
-        } else if (current_phase_idx == -1 && !config.phases.empty()) { // No phases active yet, but phases are configured
-             if (time_now >= config.phases[0].start_time - dt/2.0) new_phase_idx_candidate = 0;
         }
-
-
-        if (new_phase_idx_candidate != current_phase_idx && new_phase_idx_candidate < num_metric_phases ) {
+        
+        if (new_phase_idx_candidate != current_phase_idx ) {
             current_phase_idx = new_phase_idx_candidate;
             phase_has_been_active[current_phase_idx] = true;
             phase_actual_start_times[current_phase_idx] = time_now;
@@ -572,17 +594,9 @@ int main() {
             std::cout << "Time: " << std::fixed << std::setprecision(1) << time_now
                       << "s - Activating PHASE " << current_phase_idx + 1;
             
-            double formation_center_x = 0.0, formation_center_y = 0.0; 
-            // Get target from config if phase index is valid for config.phases
-            if (current_phase_idx < MAX_PHASES_FROM_CONFIG && !config.phases.empty()) { 
-                formation_center_x = config.phases[current_phase_idx].center[0];
-                formation_center_y = config.phases[current_phase_idx].center[1];
-                std::cout << " (Target Center: " << formation_center_x << ", " << formation_center_y << ")";
-            } else if (ZN_TUNING_ACTIVE && MAX_PHASES_FROM_CONFIG == 0) { // ZN tuning and no phases were in config initially
-                formation_center_x = 5.0; formation_center_y = 0.0; // Default step for ZN
-                std::cout << " (ZN Default Target Center: " << formation_center_x << ", " << formation_center_y << ")";
-            }
-             std::cout << std::endl;
+            double formation_center_x = config.phases[current_phase_idx].center[0];
+            double formation_center_y = config.phases[current_phase_idx].center[1];
+            std::cout << " (Target Center: " << formation_center_x << ", " << formation_center_y << ")" << std::endl;
 
             for (int i = 0; i < NUM_DRONES; ++i) {
                 double target_x = formation_center_x + formation_offsets[i].first;
@@ -601,19 +615,17 @@ int main() {
             }
         }
 
-        // --- Wind Simulation ---
         simulated_wind_x = 0.0;
         simulated_wind_y = 0.0;
-        if (ENABLE_WIND_ACTUAL && current_phase_idx >=0 ) { // current_phase_idx is 0-indexed
-            for (const auto& wp_cfg : config.wind_phases) { // wp_cfg.phase_number is 1-indexed
+        if (ENABLE_WIND_ACTUAL && current_phase_idx >=0 ) {
+            for (const auto& wp_cfg : config.wind_phases) {
                 if (wp_cfg.phase_number == (current_phase_idx + 1) ) { 
                     for (const auto& tw : wp_cfg.time_windows) {
-                        // Time window start/end are relative to the start of *this* simulation phase
                         double time_in_current_phase = time_now - phase_actual_start_times[current_phase_idx];
                         if (time_in_current_phase >= tw.start_time && time_in_current_phase < tw.end_time) {
                             if (tw.is_sine_wave) {
                                 if(!tw.force.empty()) simulated_wind_x += tw.force[0] * sin(time_now * tw.sine_frequency_rad_s); 
-                                if(tw.force.size() > 1) simulated_wind_y += tw.force[1] * sin(time_now * tw.sine_frequency_rad_s); // Optional: Y can also be sine
+                                if(tw.force.size() > 1) simulated_wind_y += tw.force[1] * sin(time_now * tw.sine_frequency_rad_s);
                             } else {
                                 if(!tw.force.empty()) simulated_wind_x += tw.force[0];
                                 if(tw.force.size() > 1) simulated_wind_y += tw.force[1];
@@ -624,18 +636,16 @@ int main() {
             }
         }
 
-        // --- Control and Update Loop ---
         if(config.csv_enabled && csv_file.is_open()) csv_file << time_now;
 
         for (int i = 0; i < NUM_DRONES; ++i) {
             double error_x = pid_x_controllers[i].getSetpoint() - drones[i].position_x;
             double error_y = pid_y_controllers[i].getSetpoint() - drones[i].position_y;
-
             double d_error_x_fls = (dt > 1e-9) ? (error_x - drones[i].prev_error_x_fls) / dt : 0.0;
             double d_error_y_fls = (dt > 1e-9) ? (error_y - drones[i].prev_error_y_fls) / dt : 0.0;
 
-            agent_control_pkg::PIDController::PIDTerms terms_x = pid_x_controllers[i].calculate_with_terms(drones[i].position_x, dt);
-            agent_control_pkg::PIDController::PIDTerms terms_y = pid_y_controllers[i].calculate_with_terms(drones[i].position_y, dt);
+            auto terms_x = pid_x_controllers[i].calculate_with_terms(drones[i].position_x, dt);
+            auto terms_y = pid_y_controllers[i].calculate_with_terms(drones[i].position_y, dt);
 
             double fls_correction_x = 0.0;
             double fls_correction_y = 0.0;
@@ -644,26 +654,22 @@ int main() {
                 fls_correction_y = fls_y_controllers_vec[i].calculateOutput(error_y, d_error_y_fls, simulated_wind_y);
             }
 
-            double final_cmd_x = clamp(terms_x.total_output + fls_correction_x, output_min, output_max);
-            double final_cmd_y = clamp(terms_y.total_output + fls_correction_y, output_min, output_max);
+            double final_cmd_x = clamp(terms_x.total_output + fls_correction_x, config.pid_params.output_min, config.pid_params.output_max);
+            double final_cmd_y = clamp(terms_y.total_output + fls_correction_y, config.pid_params.output_min, config.pid_params.output_max);
 
             drones[i].update(final_cmd_x, final_cmd_y, dt, simulated_wind_x, simulated_wind_y);
-
             drones[i].prev_error_x_fls = error_x;
             drones[i].prev_error_y_fls = error_y;
 
-            if(current_phase_idx >= 0 && current_phase_idx < num_metric_phases && drone_metrics_x[i][current_phase_idx].phase_active_for_metrics) {
+            if(current_phase_idx >= 0 && current_phase_idx < num_metric_phases) {
                 drone_metrics_x[i][current_phase_idx].update_metrics(drones[i].position_x, time_now);
                 drone_metrics_y[i][current_phase_idx].update_metrics(drones[i].position_y, time_now);
             }
-
              if(config.csv_enabled && csv_file.is_open()){
                 csv_file << "," << pid_x_controllers[i].getSetpoint() << "," << drones[i].position_x << "," << error_x << "," << terms_x.total_output
-                         << "," << fls_correction_x << "," << final_cmd_x
-                         << "," << terms_x.p << "," << terms_x.i << "," << terms_x.d
+                         << "," << fls_correction_x << "," << final_cmd_x << "," << terms_x.p << "," << terms_x.i << "," << terms_x.d
                          << "," << pid_y_controllers[i].getSetpoint() << "," << drones[i].position_y << "," << error_y << "," << terms_y.total_output
-                         << "," << fls_correction_y << "," << final_cmd_y
-                         << "," << terms_y.p << "," << terms_y.i << "," << terms_y.d;
+                         << "," << fls_correction_y << "," << final_cmd_y << "," << terms_y.p << "," << terms_y.i << "," << terms_y.d;
             }
         }
         if (config.csv_enabled && csv_file.is_open() && ENABLE_WIND_ACTUAL) csv_file << "," << simulated_wind_x << "," << simulated_wind_y;
@@ -672,7 +678,7 @@ int main() {
         if (config.console_output_enabled && (time_now - last_console_print_time >= config.console_update_interval - dt/2.0 ) ) {
              if (NUM_DRONES > 0) { 
                 std::cout << "T=" << std::fixed << std::setprecision(1) << time_now
-                          << " Ph:" << (current_phase_idx >=0 ? current_phase_idx + 1 : 0) // Show 0 if no phase active
+                          << " Ph:" << (current_phase_idx >=0 ? current_phase_idx + 1 : 0)
                           << " D0_Pos:(" << std::fixed << std::setprecision(2) << drones[0].position_x << "," << drones[0].position_y << ")";
                 if (ENABLE_WIND_ACTUAL) {
                      std::cout << " Wind:(" << std::fixed << std::setprecision(2) << simulated_wind_x << "," << simulated_wind_y << ")";
@@ -686,78 +692,50 @@ int main() {
              last_console_print_time = time_now;
         }
     }
-    if(config.csv_enabled && csv_file.is_open()) csv_file.close();
+    if(csv_file.is_open()) csv_file.close();
 
     // --- Finalize and Print/Save Metrics ---
     std::cout << "\n--- FINAL PERFORMANCE METRICS ---" << std::endl;
     if (ZN_TUNING_ACTIVE) {
         std::cout << "Z-N Tuning Run (Kp_test = " << ZN_KP_TEST_VALUE << ") complete." << std::endl;
         std::cout << "Analyze CSV (" << csv_filepath.string() << ") for Drone 0 X-axis oscillations." << std::endl;
-    } else if (num_metric_phases > 0) { 
+    } else if (num_metric_phases > 0) {
         for (int p_idx = 0; p_idx < num_metric_phases; ++p_idx) {
-            if (!phase_has_been_active[p_idx] && !(p_idx == 0 && MAX_PHASES_FROM_CONFIG == 0 && ZN_TUNING_ACTIVE) ) {
-                // Skip phases that never became active, unless it's the default phase 0 for a ZN run with no phases in config
-                 if (p_idx == 0 && MAX_PHASES_FROM_CONFIG == 0 && ZN_TUNING_ACTIVE && !phase_has_been_active[0]) {
-                    // This case is for ZN when config.phases was empty, phase_has_been_active[0] might still be false
-                    // but we want to finalize metrics for this implicit phase 0.
-                } else if (p_idx > 0) { // Always process phase 0 if it was active, otherwise skip if not active
-                    continue;
-                } else if (p_idx == 0 && !phase_has_been_active[0]) { // Phase 0 was never active
-                    continue;
-                }
-            }
-
-
-            if(config.metrics_enabled && metrics_file_stream.is_open()) metrics_file_stream << "\n-- METRICS FOR PHASE " << p_idx + 1 << " --\n";
+            if (!phase_has_been_active[p_idx]) continue;
+            if(metrics_file_stream.is_open()) metrics_file_stream << "\n-- METRICS FOR PHASE " << p_idx + 1 << " --\n";
             std::cout << "\n-- METRICS FOR PHASE " << p_idx + 1 << " --" << std::endl;
 
-            if (p_idx < MAX_PHASES_FROM_CONFIG && !config.phases.empty()) { 
+            if (p_idx < MAX_PHASES_FROM_CONFIG) { 
                  std::string phase_info = " Target Center: (" + std::to_string(config.phases[p_idx].center[0]) + ", " + std::to_string(config.phases[p_idx].center[1]) + ")\n";
-                 if(config.metrics_enabled && metrics_file_stream.is_open()) metrics_file_stream << phase_info;
-                 std::cout << phase_info;
-            } else if (ZN_TUNING_ACTIVE && p_idx == 0 && MAX_PHASES_FROM_CONFIG == 0){
-                std::string phase_info = " ZN Default Target Center: (5.0, 0.0)\n"; // Matches the default ZN phase target
-                 if(config.metrics_enabled && metrics_file_stream.is_open()) metrics_file_stream << phase_info;
+                 if(metrics_file_stream.is_open()) metrics_file_stream << phase_info;
                  std::cout << phase_info;
             }
 
-
             for (int i = 0; i < NUM_DRONES; ++i) {
-                // Ensure metrics are finalized only if the phase was active for this drone's metrics
                 if (drone_metrics_x[i][p_idx].phase_active_for_metrics) {
                     drone_metrics_x[i][p_idx].finalize_metrics_calculation(phase_actual_start_times[p_idx]);
                     drone_metrics_y[i][p_idx].finalize_metrics_calculation(phase_actual_start_times[p_idx]);
 
-                    std::ostringstream drone_metric_oss;
-                    drone_metric_oss << " Drone " << i << ":\n";
-                    drone_metric_oss << "  X-axis: OS=" << std::fixed << std::setprecision(1) << drone_metrics_x[i][p_idx].overshoot_percent << "%"
+                    std::ostringstream oss;
+                    oss << " Drone " << i << ":\n";
+                    oss << "  X-axis: OS=" << std::fixed << std::setprecision(1) << drone_metrics_x[i][p_idx].overshoot_percent << "%"
                               << ", ST(2%)=" << (drone_metrics_x[i][p_idx].settling_time_2percent >=0 ? std::to_string(drone_metrics_x[i][p_idx].settling_time_2percent) : "N/A") << "s"
                               << ", Peak=" << std::fixed << std::setprecision(2) << drone_metrics_x[i][p_idx].peak_value << " @ " << drone_metrics_x[i][p_idx].peak_time << "s"
                               << " (Tgt:" << drone_metrics_x[i][p_idx].target_value_for_metrics << " Init:" << drone_metrics_x[i][p_idx].initial_value_for_metrics << ")\n";
-                    drone_metric_oss << "  Y-axis: OS=" << std::fixed << std::setprecision(1) << drone_metrics_y[i][p_idx].overshoot_percent << "%"
+                    oss << "  Y-axis: OS=" << std::fixed << std::setprecision(1) << drone_metrics_y[i][p_idx].overshoot_percent << "%"
                               << ", ST(2%)=" << (drone_metrics_y[i][p_idx].settling_time_2percent >=0 ? std::to_string(drone_metrics_y[i][p_idx].settling_time_2percent) : "N/A") << "s"
                               << ", Peak=" << std::fixed << std::setprecision(2) << drone_metrics_y[i][p_idx].peak_value << " @ " << drone_metrics_y[i][p_idx].peak_time << "s"
                               << " (Tgt:" << drone_metrics_y[i][p_idx].target_value_for_metrics << " Init:" << drone_metrics_y[i][p_idx].initial_value_for_metrics << ")\n";
                     
-                    std::cout << drone_metric_oss.str();
-                    if(config.metrics_enabled && metrics_file_stream.is_open()) metrics_file_stream << drone_metric_oss.str();
+                    std::cout << oss.str();
+                    if(metrics_file_stream.is_open()) metrics_file_stream << oss.str();
                 }
             }
         }
-    } else {
-        std::cout << "No phases were defined or run, or ZN mode without detailed metrics. No phase-specific metrics to display." << std::endl;
     }
 
     if(metrics_file_stream.is_open()) metrics_file_stream.close();
 
     std::cout << "\nMulti-Drone Test complete." << std::endl;
-    if(config.csv_enabled && csv_file.is_open()) {} // File already closed or error handled
-    else if (config.csv_enabled) {std::cout << "CSV Data was intended for: " << csv_filepath.string() << " (but may have failed to open)" << std::endl;}
-    
-    if(metrics_file_stream.is_open()) {} // Already closed
-    else if ( (config.metrics_enabled && !ZN_TUNING_ACTIVE) || ZN_TUNING_ACTIVE) { // Check if metrics/info file was intended
-        std::cout << "Metrics/Info was intended for: " << metrics_filepath.string() << " (but may have failed to open)" << std::endl;
-    }
-
     return 0;
 }
