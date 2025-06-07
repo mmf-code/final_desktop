@@ -1,0 +1,52 @@
+Simulation Metrics for: multi_agent_sim_ZN_Conservative_Kp54.000_Ki6.667_Kd121.500_FLS_OFF_WIND_ON_20250608_002215
+PID Gains: Kp=54, Ki=6.66667, Kd=121.5
+FLS: OFF, Wind: ON
+=======================================================================
+
+-- METRICS FOR PHASE 1 --
+ Target Center: (5.000000, 5.000000)
+ Drone 0:
+  X-axis: OS=21.1%, ST(2%)=29.250000s, ST(5%)=20.350000s, SSE=1.8%, Peak=6.05 @ 9.80s (Tgt:5.00 Init:0.00)
+  Y-axis: OS=16.6%, ST(2%)=20.850000s, ST(5%)=18.050000s, SSE=0.9%, Peak=8.33 @ 9.95s (Tgt:7.31 Init:1.15)
+ Drone 1:
+  X-axis: OS=20.7%, ST(2%)=26.850000s, ST(5%)=21.950000s, SSE=1.0%, Peak=4.03 @ 9.95s (Tgt:3.00 Init:-2.00)
+  Y-axis: OS=15.7%, ST(2%)=N/As, ST(5%)=17.300000s, SSE=5.1%, Peak=4.76 @ 9.95s (Tgt:3.85 Init:-2.00)
+ Drone 2:
+  X-axis: OS=20.8%, ST(2%)=26.950000s, ST(5%)=21.950000s, SSE=1.0%, Peak=8.04 @ 9.45s (Tgt:7.00 Init:2.00)
+  Y-axis: OS=15.7%, ST(2%)=N/As, ST(5%)=17.300000s, SSE=5.1%, Peak=4.76 @ 9.95s (Tgt:3.85 Init:-2.00)
+
+-- METRICS FOR PHASE 2 --
+ Target Center: (-5.000000, 0.000000)
+ Drone 0:
+  X-axis: OS=18.2%, ST(2%)=27.500000s, ST(5%)=19.000000s, SSE=1.4%, Peak=-6.84 @ 9.20s (Tgt:-5.00 Init:5.09)
+  Y-axis: OS=14.1%, ST(2%)=N/As, ST(5%)=17.950000s, SSE=4.2%, Peak=1.61 @ 10.00s (Tgt:2.31 Init:7.25)
+ Drone 1:
+  X-axis: OS=18.3%, ST(2%)=25.650000s, ST(5%)=20.550000s, SSE=0.8%, Peak=-8.84 @ 9.25s (Tgt:-7.00 Init:3.05)
+  Y-axis: OS=15.3%, ST(2%)=23.600000s, ST(5%)=17.850000s, SSE=1.8%, Peak=-1.96 @ 10.05s (Tgt:-1.15 Init:4.15)
+ Drone 2:
+  X-axis: OS=18.3%, ST(2%)=25.700000s, ST(5%)=20.600000s, SSE=0.9%, Peak=-4.84 @ 8.95s (Tgt:-3.00 Init:7.05)
+  Y-axis: OS=15.3%, ST(2%)=23.600000s, ST(5%)=17.850000s, SSE=1.8%, Peak=-1.96 @ 10.05s (Tgt:-1.15 Init:4.15)
+
+-- METRICS FOR PHASE 3 --
+ Target Center: (0.000000, -5.000000)
+ Drone 0:
+  X-axis: OS=17.3%, ST(2%)=26.450000s, ST(5%)=21.750000s, SSE=0.9%, Peak=0.89 @ 11.60s (Tgt:0.00 Init:-5.14)
+  Y-axis: OS=14.8%, ST(2%)=N/As, ST(5%)=28.100000s, SSE=4.0%, Peak=-3.40 @ 14.95s (Tgt:-2.69 Init:2.10)
+ Drone 1:
+  X-axis: OS=18.8%, ST(2%)=26.950000s, ST(5%)=22.350000s, SSE=1.0%, Peak=-1.04 @ 11.60s (Tgt:-2.00 Init:-7.08)
+  Y-axis: OS=16.1%, ST(2%)=19.050000s, ST(5%)=17.150000s, SSE=0.6%, Peak=-6.94 @ 9.95s (Tgt:-6.15 Init:-1.25)
+ Drone 2:
+  X-axis: OS=18.8%, ST(2%)=26.750000s, ST(5%)=22.150000s, SSE=0.9%, Peak=2.96 @ 11.40s (Tgt:2.00 Init:-3.09)
+  Y-axis: OS=16.1%, ST(2%)=19.050000s, ST(5%)=17.150000s, SSE=0.6%, Peak=-6.94 @ 9.95s (Tgt:-6.15 Init:-1.25)
+
+-- METRICS FOR PHASE 4 --
+ Target Center: (5.000000, 0.000000)
+ Drone 0:
+  X-axis: OS=20.1%, ST(2%)=27.300000s, ST(5%)=22.400000s, SSE=1.1%, Peak=5.99 @ 9.05s (Tgt:5.00 Init:0.05)
+  Y-axis: OS=12.6%, ST(2%)=N/As, ST(5%)=26.600000s, SSE=2.7%, Peak=2.96 @ 9.45s (Tgt:2.31 Init:-2.88)
+ Drone 1:
+  X-axis: OS=20.7%, ST(2%)=N/As, ST(5%)=20.050000s, SSE=2.8%, Peak=4.03 @ 9.40s (Tgt:3.00 Init:-1.95)
+  Y-axis: OS=13.5%, ST(2%)=N/As, ST(5%)=16.850000s, SSE=2.4%, Peak=-0.48 @ 8.95s (Tgt:-1.15 Init:-6.13)
+ Drone 2:
+  X-axis: OS=20.4%, ST(2%)=N/As, ST(5%)=18.950000s, SSE=3.2%, Peak=8.01 @ 8.90s (Tgt:7.00 Init:2.05)
+  Y-axis: OS=13.5%, ST(2%)=N/As, ST(5%)=16.850000s, SSE=2.4%, Peak=-0.48 @ 8.95s (Tgt:-1.15 Init:-6.13)

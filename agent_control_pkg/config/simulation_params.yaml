@@ -1,101 +1,129 @@
-# agent_control_pkg/config/simulation_params.yaml
-
 simulation_settings:
   dt: 0.05
-  total_time: 120.0 
+  total_time: 120.0
   num_drones: 3
-  
   ziegler_nichols_tuning:
-    # --- Manual Tuning Parameters ---
-    enable: false                # Set to true for a SINGLE manual Kp test
-    kp_test_value: 2.5           # The Kp to use for the manual test
-    
-    # --- Automated Ku/Pu Search Parameters ---
-    enable_auto_search: false     # MASTER SWITCH for the auto-tuner
+    enable: false
+    kp_test_value: 2.5
+    enable_auto_search: false
     auto_search_kp_start: 50.0
     auto_search_kp_step: 2.0
     auto_search_kp_max: 100.0
-    simulation_time: 15.0        # How long each test run in the auto-search should last
-    
-    # --- Quick ZN Method Testing ---
-    # Set this to test specific ZN-based PID parameters (overrides controller_settings.pid when enabled)
-    # Options: "Classic", "Conservative", "LessOvershoot", "NoOvershoot", "Aggressive", "ModernZN", "Off"
-    quick_method_test: "Conservative"  # Try more conservative for Y-axis
-    manual_ku: 120.0             # Estimated Ultimate gain (extrapolated from stable behavior)
-    manual_pu: 15.0              # Estimated Ultimate period (from oscillation data)
-
-# Note: The 'auto_kp_tuning' section has been removed as its functionality is
-# now fully covered by the 'ziegler_nichols_tuning' auto-search feature.
-
-# --- NEW: Output Settings ---
-# Enable or disable writing CSV data files.
+    simulation_time: 15.0
+    quick_method_test: 'Off'
+    manual_ku: 120.0
+    manual_pu: 15.0
 csv_enabled: true
-# Enable or disable writing the metrics summary .txt file.
 metrics_enabled: true
-# Directory where all output files will be saved.
-output_directory: "output"
-# Prefix for the data CSV filename.
-csv_prefix: "sim_data"
-# Prefix for the metrics report TXT filename.
-metrics_prefix: "metrics_report"
-
-
+output_directory: output
+csv_prefix: sim_data
+metrics_prefix: metrics_report
 controller_settings:
-  pid: 
+  pid:
     kp: 3.1
-    ki: 0.4 
+    ki: 0.4
     kd: 2.2
     output_min: -10.0
     output_max: 10.0
   fls:
-    enable: false # Enable/disable fuzzy logic controller
-    params_file: "fuzzy_params.yaml"
-
+    enable: true
+    params_file: fuzzy_params.yaml
 scenario_settings:
-  enable_wind: true  # Enable/disable wind effects
+  enable_wind: false
   formation_side_length: 4.0
-  formation: 
-    initial_positions: # Drone names must be drone_0, drone_1, ... for current loader logic
-      drone_0: [0.0, 1.15]
-      drone_1: [-2.0, -2.0]
-      drone_2: [2.0, -2.0]
-  phases: 
-    - center: [5.0, 5.0]
-      start_time: 0.0
-    - center: [-5.0, 0.0]
-      start_time: 30.0
-    - center: [0.0, -5.0]
-      start_time: 60.0
-    - center: [5.0, 0.0]
-      start_time: 90.0
-  wind: 
-    phases: # Wind definition per simulation phase (1-indexed)
-      - phase: 1 # Wind events for simulation phase 1
-        time_windows:
-            # Example: Constant wind [3.0, 0.0] from 5s to 15s into this phase
-          - {start_time: 5.0, end_time: 15.0, force: [3.0, 0.0], is_sine_wave: false}
-            # Example: Constant wind [0.0, -1.0] from 10s to 20s into this phase
-          - {start_time: 10.0, end_time: 20.0, force: [0.0, -1.0], is_sine_wave: false}
-      - phase: 2 # Wind events for simulation phase 2
-        time_windows:
-          - {start_time: 5.0, end_time: 15.0, force: [-2.0, 0.0], is_sine_wave: false} # 35s global -> 5s into phase 2 (starts at 30s)
-          - {start_time: 10.0, end_time: 20.0, force: [0.0, 1.5], is_sine_wave: false} # 40s global -> 10s into phase 2
-      - phase: 3 # Wind events for simulation phase 3
-        time_windows:
-            # Example: Sine wave wind with X amplitude 2.0 from 5s to 10s into this phase
-          - {start_time: 5.0, end_time: 10.0, force: [2.0, 0.0], is_sine_wave: true, sine_frequency_rad_s: 1.57} # 65s global -> 5s into phase 3 (starts at 60s)
-          - {start_time: 10.0, end_time: 12.0, force: [0.0, 4.0], is_sine_wave: false} # 70s global
-          - {start_time: 12.0, end_time: 15.0, force: [0.0, -2.0], is_sine_wave: false} # 72s global
-      - phase: 4 # Wind events for simulation phase 4
-        time_windows:
-          - {start_time: 5.0, end_time: 15.0, force: [2.5, -2.5], is_sine_wave: false} # 95s global -> 5s into phase 4 (starts at 90s)
-
+  formation:
+    initial_positions:
+      drone_0:
+      - 0.0
+      - 1.15
+      drone_1:
+      - -2.0
+      - -2.0
+      drone_2:
+      - 2.0
+      - -2.0
+  phases:
+  - center:
+    - 5.0
+    - 5.0
+    start_time: 0.0
+  - center:
+    - -5.0
+    - 0.0
+    start_time: 30.0
+  - center:
+    - 0.0
+    - -5.0
+    start_time: 60.0
+  - center:
+    - 5.0
+    - 0.0
+    start_time: 90.0
+  wind:
+    phases:
+    - phase: 1
+      time_windows:
+      - start_time: 5.0
+        end_time: 15.0
+        force:
+        - 3.0
+        - 0.0
+        is_sine_wave: false
+      - start_time: 10.0
+        end_time: 20.0
+        force:
+        - 0.0
+        - -1.0
+        is_sine_wave: false
+    - phase: 2
+      time_windows:
+      - start_time: 5.0
+        end_time: 15.0
+        force:
+        - -2.0
+        - 0.0
+        is_sine_wave: false
+      - start_time: 10.0
+        end_time: 20.0
+        force:
+        - 0.0
+        - 1.5
+        is_sine_wave: false
+    - phase: 3
+      time_windows:
+      - start_time: 5.0
+        end_time: 10.0
+        force:
+        - 2.0
+        - 0.0
+        is_sine_wave: true
+        sine_frequency_rad_s: 1.57
+      - start_time: 10.0
+        end_time: 12.0
+        force:
+        - 0.0
+        - 4.0
+        is_sine_wave: false
+      - start_time: 12.0
+        end_time: 15.0
+        force:
+        - 0.0
+        - -2.0
+        is_sine_wave: false
+    - phase: 4
+      time_windows:
+      - start_time: 5.0
+        end_time: 15.0
+        force:
+        - 2.5
+        - -2.5
+        is_sine_wave: false
 output_settings:
-  output_directory: "simulation_outputs" # General output directory
+  output_directory: simulation_outputs
   csv_enabled: true
-  csv_prefix: "multi_agent_sim" 
-  metrics_enabled: true # Enable/disable metrics text file generation
-  metrics_prefix: "metrics_sim"
+  csv_prefix: multi_agent_sim
+  metrics_enabled: true
+  metrics_prefix: metrics_sim
   console_output:
     enabled: true
     update_interval: 5.0

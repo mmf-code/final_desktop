@@ -944,6 +944,11 @@ int main() {
     oss_filename_suffix << "_Kp" << std::fixed << std::setprecision(3)
                         << ZN_KP_TEST_VALUE;
   } else {
+    // Check if we're using a ZN method for quick testing
+    if (!config.zn_tuning_params.quick_method_test.empty() && 
+        config.zn_tuning_params.quick_method_test != "Off") {
+      oss_filename_suffix << "_ZN_" << config.zn_tuning_params.quick_method_test;
+    }
     oss_filename_suffix << "_Kp" << std::fixed << std::setprecision(3)
                         << kp_actual << "_Ki" << std::fixed
                         << std::setprecision(3) << ki_actual << "_Kd"

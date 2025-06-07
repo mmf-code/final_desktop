@@ -1,0 +1,155 @@
+MULTI-DRONE FORMATION CONTROL - SIMULATION ANALYSIS REPORT
+=================================================================
+Generated: 2025-06-08 00:33:35
+Total Configurations Analyzed: 10
+
+1. CONFIGURATION: multi_agent_sim_Kp1.800_Ki2.400_Kd0.337_FLS_ON_WIND_ON_20250607_235559
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=1.800, Ki=2.400, Kd=0.337
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=24.034m, Max=202.637m, Mean=99.586m
+  Drone 1: Final=123.637m, Max=238.866m, Mean=93.932m
+  Drone 2: Final=123.637m, Max=238.866m, Mean=93.932m
+  Overall: Final Avg=122.225m, Max=238.866m, Mean=95.817m
+
+2. CONFIGURATION: multi_agent_sim_Kp1.980_Ki1.980_Kd1.307_FLS_ON_WIND_ON_20250608_000133
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=1.980, Ki=1.980, Kd=1.307
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.003m, Max=11.173m, Mean=1.152m
+  Drone 1: Final=0.003m, Max=11.172m, Mean=1.143m
+  Drone 2: Final=0.003m, Max=11.172m, Mean=1.143m
+  Overall: Final Avg=0.003m, Max=11.173m, Mean=1.146m
+
+3. CONFIGURATION: multi_agent_sim_Kp2.700_Ki2.500_Kd0.810_FLS_ON_WIND_ON_20250607_235505
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=2.700, Ki=2.500, Kd=0.810
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=43.060m, Max=72.882m, Mean=17.997m
+  Drone 1: Final=43.060m, Max=72.882m, Mean=17.936m
+  Drone 2: Final=43.060m, Max=72.882m, Mean=17.936m
+  Overall: Final Avg=43.904m, Max=72.882m, Mean=17.956m
+
+4. CONFIGURATION: multi_agent_sim_Kp24.000_Ki3.200_Kd118.800_FLS_OFF_WIND_ON_20250608_001330
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=24.000, Ki=3.200, Kd=118.800
+FLS: Disabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.800m, Max=11.669m, Mean=2.141m
+  Drone 1: Final=0.698m, Max=11.746m, Mean=2.122m
+  Drone 2: Final=0.732m, Max=11.638m, Mean=2.103m
+  Overall: Final Avg=0.736m, Max=11.746m, Mean=2.122m
+
+5. CONFIGURATION: multi_agent_sim_Kp24.000_Ki3.200_Kd118.800_FLS_ON_WIND_ON_20250608_000806
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=24.000, Ki=3.200, Kd=118.800
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.777m, Max=11.762m, Mean=1.738m
+  Drone 1: Final=0.707m, Max=11.652m, Mean=1.718m
+  Drone 2: Final=0.723m, Max=11.693m, Mean=1.727m
+  Overall: Final Avg=0.729m, Max=11.762m, Mean=1.728m
+
+6. CONFIGURATION: multi_agent_sim_Kp3.100_Ki0.400_Kd2.200_FLS_ON_WIND_ON_20250607_215752
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=3.100, Ki=0.400, Kd=2.200
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.058m, Max=11.203m, Mean=0.580m
+  Drone 1: Final=0.058m, Max=11.204m, Mean=0.577m
+  Drone 2: Final=0.058m, Max=11.204m, Mean=0.577m
+  Overall: Final Avg=0.058m, Max=11.204m, Mean=0.578m
+
+7. CONFIGURATION: multi_agent_sim_Kp3.100_Ki0.400_Kd2.200_FLS_ON_WIND_ON_20250607_235344
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=3.100, Ki=0.400, Kd=2.200
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.058m, Max=11.203m, Mean=0.580m
+  Drone 1: Final=0.058m, Max=11.204m, Mean=0.577m
+  Drone 2: Final=0.058m, Max=11.204m, Mean=0.577m
+  Overall: Final Avg=0.058m, Max=11.204m, Mean=0.578m
+
+8. CONFIGURATION: multi_agent_sim_Kp54.000_Ki6.667_Kd121.500_FLS_OFF_WIND_ON_20250608_001442
+--------------------------------------------------
+ZN Method: Unknown
+PID Parameters: Kp=54.000, Ki=6.667, Kd=121.500
+FLS: Disabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.169m, Max=11.234m, Mean=1.107m
+  Drone 1: Final=0.163m, Max=11.362m, Mean=1.075m
+  Drone 2: Final=0.181m, Max=11.363m, Mean=1.072m
+  Overall: Final Avg=0.187m, Max=11.363m, Mean=1.085m
+
+9. CONFIGURATION: multi_agent_sim_ZN_Conservative_Kp54.000_Ki6.667_Kd121.500_FLS_OFF_WIND_ON_20250608_002215
+--------------------------------------------------
+ZN Method: Conservative
+PID Parameters: Kp=54.000, Ki=6.667, Kd=121.500
+FLS: Disabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.169m, Max=11.234m, Mean=1.107m
+  Drone 1: Final=0.163m, Max=11.362m, Mean=1.075m
+  Drone 2: Final=0.181m, Max=11.363m, Mean=1.072m
+  Overall: Final Avg=0.187m, Max=11.363m, Mean=1.085m
+
+10. CONFIGURATION: multi_agent_sim_ZN_Conservative_Kp54.000_Ki6.667_Kd121.500_FLS_ON_WIND_ON_20250608_002233
+--------------------------------------------------
+ZN Method: Conservative
+PID Parameters: Kp=54.000, Ki=6.667, Kd=121.500
+FLS: Enabled
+Wind: Enabled
+Number of Drones: 3
+Simulation Duration: 120.0 seconds
+
+Performance Metrics:
+  Drone 0: Final=0.150m, Max=11.284m, Mean=1.007m
+  Drone 1: Final=0.218m, Max=11.267m, Mean=0.999m
+  Drone 2: Final=0.211m, Max=11.321m, Mean=1.022m
+  Overall: Final Avg=0.218m, Max=11.321m, Mean=1.009m
+
