@@ -52,3 +52,6 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 outputs/
+
+# Environment scripts (user-specific)
+refresh_cursor_env.ps1

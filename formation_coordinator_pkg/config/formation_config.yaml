@@ -1,0 +1,21 @@
+# Formation Coordinator Configuration
+formation_coordinator:
+  ros__parameters:
+    # Formation parameters
+    formation_type: "triangle"  # triangle, square, line
+    formation_scale: 1.0
+    
+    # Control parameters
+    update_rate: 20.0  # Hz
+    position_tolerance: 0.1  # meters
+    
+    # Communication
+    agent_namespace: "drone_"
+    num_agents: 3
+    
+    # Coordination algorithm
+    algorithm: "consensus"  # consensus, leader_follower, virtual_structure
+    
+    # Safety parameters
+    min_distance: 1.0  # minimum distance between agents
+    max_velocity: 2.0  # maximum velocity command

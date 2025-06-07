@@ -1,0 +1,45 @@
+{
+    "folders": [
+        {
+            "name": "Root",
+            "path": "."
+        },
+        {
+            "name": "Agent Control Package",
+            "path": "./agent_control_pkg"
+        },
+        {
+            "name": "Formation Coordinator Package",
+            "path": "./formation_coordinator_pkg"
+        },
+        {
+            "name": "Custom Interfaces Package",
+            "path": "./my_custom_interfaces_pkg"
+        }
+    ],
+    "settings": {
+        "cmake.sourceDirectory": "${workspaceFolder:Root}/agent_control_pkg",
+        "cmake.buildDirectory": "${workspaceFolder:Root}/build",
+        "python.defaultInterpreterPath": "${workspaceFolder:Agent Control Package}/.venv/bin/python",
+        "files.exclude": {
+            "**/build": true,
+            "**/install": true,
+            "**/log": true,
+            "**/.venv": false,
+            "**/vcpkg_installed": true,
+            "**/__pycache__": true,
+            "**/*.pyc": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-vscode.cpptools",
+            "ms-vscode.cmake-tools",
+            "redhat.vscode-yaml",
+            "ms-iot.vscode-ros",
+            "ms-python.python",
+            "redhat.vscode-xml",
+            "llvm-vs-code-extensions.vscode-clangd"
+        ]
+    }
+}

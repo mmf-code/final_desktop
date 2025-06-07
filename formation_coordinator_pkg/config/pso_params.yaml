@@ -1,0 +1,29 @@
+# PSO (Particle Swarm Optimization) Parameters
+pso_optimizer:
+  ros__parameters:
+    # PSO Algorithm Parameters
+    num_particles: 30
+    max_iterations: 100
+    
+    # PSO Coefficients
+    inertia_weight: 0.9
+    cognitive_coefficient: 2.0  # c1
+    social_coefficient: 2.0     # c2
+    
+    # Convergence criteria
+    tolerance: 1e-6
+    max_stagnation_iterations: 20
+    
+    # Search space bounds
+    position_bounds:
+      min: [-10.0, -10.0]
+      max: [10.0, 10.0]
+    
+    velocity_bounds:
+      min: [-2.0, -2.0] 
+      max: [2.0, 2.0]
+    
+    # Objective function weights
+    formation_error_weight: 1.0
+    collision_avoidance_weight: 10.0
+    energy_efficiency_weight: 0.1
