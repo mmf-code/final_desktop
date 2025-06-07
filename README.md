@@ -90,7 +90,7 @@ The file `simulation_params.yaml` contains a `ziegler_nichols_tuning` section co
 
 * **Automated search** – set `enable_auto_search` to `true` to sweep a range of Kp values. The program runs a short internal simulation for each Kp, prints the overshoot and settling time, detects the first unstable Kp (Ku) and its period (Pu), then prints the recommended PID gains and exits.
 
-* **Single Kp test** – to test one proportional gain only, disable `enable_auto_search` and set `enable: true` with `kp_test_value` to the desired Kp:
+* **Single Kp test** – disable `enable_auto_search` and set `enable: true` along with `kp_test_value` to run one full simulation with that Kp. The run forces `Ki=0` and `Kd=0` and prints the peak error, percent overshoot, and settling time when it finishes:
 
 ```yaml
 ziegler_nichols_tuning:
@@ -99,7 +99,7 @@ ziegler_nichols_tuning:
   kp_test_value: 2.5
 ```
 
-Overshoot and settling metrics from the auto-search output can help you choose appropriate gains even when scanning manually.
+This single-run mode also prints the peak, overshoot, and settling time metrics, so you can evaluate manual gains without using the auto-search.
 
 ## Project Structure
 
