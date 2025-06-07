@@ -79,10 +79,27 @@ The `agent_control_pkg` is set up for a local build.
    ```
    or on Windows:
    ```bash
-   Debug\pid_standalone_tester.exe
-   ```
-   Use the `--use-fls` flag to enable the fuzzy logic system at runtime.
+  Debug\pid_standalone_tester.exe
+  ```
+  Use the `--use-fls` flag to enable the fuzzy logic system at runtime.
 3. The simulation will run, creating timestamped output files (e.g., `multi_drone_sim_data_20240101_120000.csv` and `performance_metrics_20240101_120000_pid.txt`) in the same directory where you ran the executable.
+
+## Ziegler-Nichols PID Tuning
+
+The file `simulation_params.yaml` contains a `ziegler_nichols_tuning` section controlling the built-in PID tuner.
+
+* **Automated search** – set `enable_auto_search` to `true` to sweep a range of Kp values. The program runs a short internal simulation for each Kp, prints the overshoot and settling time, detects the first unstable Kp (Ku) and its period (Pu), then prints the recommended PID gains and exits.
+
+* **Single Kp test** – to test one proportional gain only, disable `enable_auto_search` and set `enable: true` with `kp_test_value` to the desired Kp:
+
+```yaml
+ziegler_nichols_tuning:
+  enable_auto_search: false
+  enable: true
+  kp_test_value: 2.5
+```
+
+Overshoot and settling metrics from the auto-search output can help you choose appropriate gains even when scanning manually.
 
 ## Project Structure
 
