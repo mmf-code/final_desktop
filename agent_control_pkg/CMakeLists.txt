@@ -184,6 +184,10 @@ target_link_libraries(multi_drone_pid_tester PRIVATE
     config_reader_lib  # Link against config reader library
 )
 
+# --- Modular PID System ---
+# Add the modular PID system subdirectory
+add_subdirectory(src/modular_pid_system)
+
 # The execute_process command to copy compile_commands.json has been removed.
 # It was failing due to special characters in your file path.
 # The file is still created in the build directory (`build/compile_commands.json`),
