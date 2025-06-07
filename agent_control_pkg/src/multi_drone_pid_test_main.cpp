@@ -294,6 +294,8 @@ struct ZN_AnalysisResult {
     bool is_unstable = false;
     bool is_oscillating = false;
     double period = 0.0;
+    double overshoot_percent = 0.0;
+    double settling_time_2percent = -1.0;
 };
 
 ZN_AnalysisResult analyze_for_oscillations(const std::vector<std::pair<double, double>>& error_history) {
@@ -337,16 +339,24 @@ ZN_AnalysisResult run_single_zn_simulation(double kp_test, const agent_control_p
     agent_control_pkg::PIDController pid_x(kp_test, 0.0, 0.0, -10.0, 10.0, 5.0);
 
     std::vector<std::pair<double, double>> error_history;
+    PerformanceMetrics metrics;
+    metrics.reset(0.0, pid_x.getSetpoint());
     double dt = config.dt;
-    
+
     for (double t = 0; t <= config.zn_tuning_params.simulation_time; t += dt) {
         double error = pid_x.getSetpoint() - drone.position_x;
         error_history.push_back({t, error});
         double cmd = pid_x.calculate(drone.position_x, dt);
         drone.update(cmd, 0.0, dt);
+        metrics.update_metrics(drone.position_x, t);
     }
 
-    return analyze_for_oscillations(error_history);
+    metrics.finalize_metrics_calculation(0.0);
+
+    ZN_AnalysisResult res = analyze_for_oscillations(error_history);
+    res.overshoot_percent = metrics.overshoot_percent;
+    res.settling_time_2percent = metrics.settling_time_2percent;
+    return res;
 }
 
 void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
@@ -362,6 +372,11 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
     for (double kp = params.auto_search_kp_start; kp <= params.auto_search_kp_max; kp += params.auto_search_kp_step) {
         std::cout << "Testing Kp = " << std::fixed << std::setprecision(3) << kp << " ... ";
         ZN_AnalysisResult result = run_single_zn_simulation(kp, config);
+        std::cout << "OS=" << std::fixed << std::setprecision(1) << result.overshoot_percent << "%";
+        std::cout << ", ST(2%)=";
+        if (result.settling_time_2percent >= 0.0) std::cout << result.settling_time_2percent;
+        else std::cout << "N/A";
+        std::cout << "s -> ";
 
         if (result.is_unstable) {
             std::cout << "UNSTABLE. Sustained oscillations found.\n";
