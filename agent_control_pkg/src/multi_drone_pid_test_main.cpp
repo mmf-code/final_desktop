@@ -775,7 +775,8 @@ int main() {
     if (ZN_TUNING_ACTIVE) {
         std::cout << "Z-N Tuning Run (Kp_test = " << ZN_KP_TEST_VALUE << ") complete." << std::endl;
         std::cout << "Analyze CSV (" << csv_filepath.string() << ") for Drone 0 X-axis oscillations." << std::endl;
-    } else if (num_metric_phases > 0) {
+    }
+    if (num_metric_phases > 0) {
         for (int p_idx = 0; p_idx < num_metric_phases; ++p_idx) {
             if (!phase_has_been_active[p_idx]) continue;
             if(metrics_file_stream.is_open()) metrics_file_stream << "\n-- METRICS FOR PHASE " << p_idx + 1 << " --\n";
