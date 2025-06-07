@@ -1,0 +1,36 @@
+Kp,OvershootPercent,SettlingTime2Percent,Stability
+0.5,39.0,N/A,Stable
+0.8,46.9,N/A,Stable
+1.0,52.1,14.3,Stable
+1.2,56.0,N/A,Stable
+1.5,59.0,N/A,Stable
+1.8,61.4,N/A,Stable
+2.0,63.4,14.5,Stable
+2.2,64.7,N/A,Stable
+2.5,65.2,14.9,Stable
+2.8,65.1,N/A,Stable
+3.0,64.7,N/A,Stable
+3.2,64.2,14.9,Stable
+3.5,63.8,N/A,Stable
+3.8,63.4,N/A,Stable
+4.0,63.2,N/A,Stable
+4.2,63.0,14.8,Stable
+4.5,62.8,N/A,Stable
+4.8,62.6,N/A,Stable
+5.0,62.6,N/A,Stable
+5.2,62.4,15.0,Stable
+5.5,62.3,14.7,Stable
+5.8,62.3,N/A,Stable
+6.0,62.2,N/A,Stable
+6.2,62.2,N/A,Stable
+6.5,62.1,N/A,Stable
+6.8,62.0,14.8,Stable
+7.0,61.9,14.6,Stable
+7.2,61.9,N/A,Stable
+7.5,61.9,N/A,Stable
+7.8,62.0,N/A,Stable
+8.0,62.1,N/A,Stable
+
+Ku,Not found
+Pu,Not found
+Troubleshooting,Increase kp_max or decrease kp_step

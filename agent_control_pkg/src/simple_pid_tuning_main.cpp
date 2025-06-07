@@ -64,8 +64,7 @@ struct PerformanceMetrics {
         // Settling Time (2% criterion)
         const double SETTLING_PERCENTAGE = 0.02;
         double settling_tol = std::abs(target_value * SETTLING_PERCENTAGE);
-        if (settling_tol < 1e-3 && std::abs(target_value) > 1e-9) settling_tol = std::abs(target_value * 0.1); // Use 10% if target is very small but not zero
-        else if (settling_tol < 1e-3) settling_tol = 1e-3; // Min tolerance if target is near zero
+        settling_tol = (settling_tol < 1e-3 && std::abs(target_value) > 1e-9) ? std::abs(target_value * 0.1) : std::max(settling_tol, 1e-3); // Use 10% if target is very small but not zero
 
 
         if (std::abs(current_value - target_value) <= settling_tol) {

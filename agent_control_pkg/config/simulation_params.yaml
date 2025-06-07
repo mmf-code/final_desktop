@@ -12,10 +12,17 @@ simulation_settings:
     
     # --- Automated Ku/Pu Search Parameters ---
     enable_auto_search: false     # MASTER SWITCH for the auto-tuner
-    auto_search_kp_start: 0.5
-    auto_search_kp_step: 0.25
-    auto_search_kp_max: 8.0
+    auto_search_kp_start: 50.0
+    auto_search_kp_step: 2.0
+    auto_search_kp_max: 100.0
     simulation_time: 15.0        # How long each test run in the auto-search should last
+    
+    # --- Quick ZN Method Testing ---
+    # Set this to test specific ZN-based PID parameters (overrides controller_settings.pid when enabled)
+    # Options: "Classic", "Conservative", "LessOvershoot", "NoOvershoot", "Aggressive", "ModernZN", "Off"
+    quick_method_test: "Conservative"  # Try more conservative for Y-axis
+    manual_ku: 120.0             # Estimated Ultimate gain (extrapolated from stable behavior)
+    manual_pu: 15.0              # Estimated Ultimate period (from oscillation data)
 
 # Note: The 'auto_kp_tuning' section has been removed as its functionality is
 # now fully covered by the 'ziegler_nichols_tuning' auto-search feature.
@@ -41,7 +48,7 @@ controller_settings:
     output_min: -10.0
     output_max: 10.0
   fls:
-    enable: true # Enable/disable fuzzy logic controller
+    enable: false # Enable/disable fuzzy logic controller
     params_file: "fuzzy_params.yaml"
 
 scenario_settings:

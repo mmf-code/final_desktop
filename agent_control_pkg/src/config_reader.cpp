@@ -116,6 +116,11 @@ void ConfigReader::loadSimulationSettings(const YAML::Node& node, SimulationConf
         config.zn_tuning_params.auto_search_kp_start = zn_node["auto_search_kp_start"].as<double>(config.zn_tuning_params.auto_search_kp_start);
         config.zn_tuning_params.auto_search_kp_step = zn_node["auto_search_kp_step"].as<double>(config.zn_tuning_params.auto_search_kp_step);
         config.zn_tuning_params.auto_search_kp_max = zn_node["auto_search_kp_max"].as<double>(config.zn_tuning_params.auto_search_kp_max);
+        
+        // Load quick method testing parameters
+        config.zn_tuning_params.quick_method_test = zn_node["quick_method_test"].as<std::string>(config.zn_tuning_params.quick_method_test);
+        config.zn_tuning_params.manual_ku = zn_node["manual_ku"].as<double>(config.zn_tuning_params.manual_ku);
+        config.zn_tuning_params.manual_pu = zn_node["manual_pu"].as<double>(config.zn_tuning_params.manual_pu);
     }
 }
 
@@ -173,7 +178,7 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
         std::cout << "INFO: Initial positions count mismatch or load error. Generating default staggered positions." << std::endl;
         config.initial_positions.clear();
         for(int i = 0; i < config.num_drones; ++i) {
-            double x_pos = static_cast<double>(i) * 2.0 - (static_cast<double>(config.num_drones - 1) * 1.0);
+            double x_pos = (static_cast<double>(i) * 2.0) - (static_cast<double>(config.num_drones - 1) * 1.0);
             config.initial_positions.push_back({x_pos, 0.0});
         }
     }

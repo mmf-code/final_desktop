@@ -52,6 +52,11 @@ struct ZNTuningParams {
     double auto_search_kp_start{0.5};
     double auto_search_kp_step{0.25};
     double auto_search_kp_max{10.0};
+    
+    // Parameters for quick method testing
+    std::string quick_method_test{"Off"}; // "Classic", "Conservative", "LessOvershoot", "NoOvershoot", "Aggressive", "ModernZN", "Off"
+    double manual_ku{6.0};               // Ultimate gain for quick method calculations
+    double manual_pu{2.0};               // Ultimate period for quick method calculations
 };
 
 // --- CORRECTED & MERGED: Main simulation configuration structure ---

@@ -1,3 +1,67 @@
+/*
+ * ===========================================================================
+ * ENHANCED ZIEGLER-NICHOLS PID TUNING SYSTEM
+ * ===========================================================================
+ * 
+ * This program supports multiple ways to test and optimize PID parameters:
+ * 
+ * 🔍 MODE 1: ZN AUTO-SEARCH (Automatic Ku/Pu Discovery)
+ * -------------------------------------------------------
+ * Set in simulation_params.yaml:
+ *   ziegler_nichols_tuning:
+ *     enable_auto_search: true
+ *     auto_search_kp_start: 0.5    # Start testing from this Kp
+ *     auto_search_kp_max: 12.0     # Test up to this Kp
+ *     auto_search_kp_step: 0.25    # Increment step
+ *     simulation_time: 15.0        # Duration of each test
+ * 
+ * This automatically finds Ultimate Gain (Ku) and Period (Pu), then suggests
+ * 6 different ZN methods: Classic, Conservative, LessOvershoot, NoOvershoot, 
+ * Aggressive, and ModernZN with calculated Kp, Ki, Kd values.
+ * 
+ * 🔧 MODE 2: ZN MANUAL TESTING (Single Kp Test)
+ * -----------------------------------------------
+ * Set in simulation_params.yaml:
+ *   ziegler_nichols_tuning:
+ *     enable: true
+ *     kp_test_value: 3.5     # Test this specific Kp with Ki=Kd=0
+ *     simulation_time: 15.0
+ * 
+ * Tests a single Kp value with Ki and Kd set to zero to observe oscillations.
+ * 
+ * 🎯 MODE 3: QUICK ZN METHOD TESTING (Code-Level Selection)
+ * ----------------------------------------------------------
+ * In the code below (around line 680), uncomment ONE of these lines:
+ *   // quick_method = "Classic";        // Balanced response
+ *   // quick_method = "Conservative";   // Less overshoot  
+ *   // quick_method = "LessOvershoot";  // Minimal overshoot
+ *   // quick_method = "NoOvershoot";    // No overshoot
+ *   // quick_method = "Aggressive";     // Fast response
+ *   // quick_method = "ModernZN";       // Modern interpretation
+ * 
+ * This applies pre-calculated ZN formulas using assumed Ku=6.0, Pu=2.0.
+ * Adjust manual_ku and manual_pu values if you know your system's values.
+ * 
+ * 📊 RECOMMENDED TESTING WORKFLOW:
+ * ================================
+ * 1. Run AUTO-SEARCH first to find Ku and Pu
+ * 2. Copy one of the suggested parameter sets to controller_settings
+ * 3. Test different methods by updating YAML and running normal simulation
+ * 4. Compare performance metrics (overshoot, settling time, etc.)
+ * 5. Choose best method for your application requirements
+ * 
+ * 💡 METHOD SELECTION GUIDE:
+ * ==========================
+ * - Classic: Good starting point, moderate overshoot
+ * - Conservative: When stability is more important than speed  
+ * - LessOvershoot: When overshoot must be minimized
+ * - NoOvershoot: Critical systems requiring no overshoot
+ * - Aggressive: When fast response is priority
+ * - ModernZN: Updated ZN approach for modern control systems
+ * 
+ * ===========================================================================
+ */
+
 #include "../include/agent_control_pkg/config_reader.hpp"
 #include "../include/agent_control_pkg/gt2_fuzzy_logic_system.hpp"
 #include "../include/agent_control_pkg/pid_controller.hpp"
@@ -15,7 +79,6 @@
 // --- START: New includes for file I/O and paths ---
 #include <chrono>
 #include <filesystem>
-#include <numeric>
 // --- END: New includes ---
 
 // --- Start: Local FLS helper structs and functions (specific to this main
@@ -193,10 +256,14 @@ struct PerformanceMetrics {
   double peak_time = 0.0;
   double overshoot_percent = 0.0;
   double settling_time_2percent = -1.0;
+  double settling_time_5percent = -1.0;  // More relaxed settling time
+  double final_steady_state_error = 0.0; // How close we actually get
   double initial_value_for_metrics = 0.0;
   double target_value_for_metrics = 0.0;
   bool in_settling_band = false;
+  bool in_settling_band_5percent = false;
   double time_entered_settling_band = -1.0;
+  double time_entered_settling_band_5percent = -1.0;
   bool phase_active_for_metrics = false;
 
   void reset(double initial_val, double target_val) {
@@ -204,10 +271,14 @@ struct PerformanceMetrics {
     peak_time = 0.0;
     overshoot_percent = 0.0;
     settling_time_2percent = -1.0;
+    settling_time_5percent = -1.0;
+    final_steady_state_error = 0.0;
     initial_value_for_metrics = initial_val;
     target_value_for_metrics = target_val;
     in_settling_band = false;
+    in_settling_band_5percent = false;
     time_entered_settling_band = -1.0;
+    time_entered_settling_band_5percent = -1.0;
     phase_active_for_metrics = true;
   }
 
@@ -215,6 +286,7 @@ struct PerformanceMetrics {
     if (!phase_active_for_metrics)
       return;
 
+    // Update peak tracking
     if (target_value_for_metrics > initial_value_for_metrics) {
       if (current_value > peak_value) {
         peak_value = current_value;
@@ -229,24 +301,27 @@ struct PerformanceMetrics {
       peak_value = initial_value_for_metrics;
     }
 
-    const double SETTLING_PERCENTAGE = 0.02;
-    double settling_range_abs =
-        std::abs(target_value_for_metrics - initial_value_for_metrics);
-    double settling_tolerance;
+    // Calculate settling tolerances
+    double settling_range_abs = std::abs(target_value_for_metrics - initial_value_for_metrics);
+    double settling_tolerance_2percent, settling_tolerance_5percent;
 
-    if (settling_range_abs < 1e-3 &&
-        std::abs(target_value_for_metrics) > 1e-9) {
-      settling_tolerance = std::abs(target_value_for_metrics * 0.10);
+    if (settling_range_abs < 1e-3 && std::abs(target_value_for_metrics) > 1e-9) {
+      settling_tolerance_2percent = std::abs(target_value_for_metrics * 0.02);
+      settling_tolerance_5percent = std::abs(target_value_for_metrics * 0.05);
     } else if (settling_range_abs < 1e-3) {
-      settling_tolerance = 0.05;
+      settling_tolerance_2percent = 0.02;
+      settling_tolerance_5percent = 0.05;
     } else {
-      settling_tolerance = settling_range_abs * SETTLING_PERCENTAGE;
+      settling_tolerance_2percent = settling_range_abs * 0.02;
+      settling_tolerance_5percent = settling_range_abs * 0.05;
     }
-    if (settling_tolerance < 1e-4)
-      settling_tolerance = 1e-4;
+    settling_tolerance_2percent = std::max(settling_tolerance_2percent, 1e-4);
+    settling_tolerance_5percent = std::max(settling_tolerance_5percent, 1e-4);
 
-    if (std::abs(current_value - target_value_for_metrics) <=
-        settling_tolerance) {
+    double current_error = std::abs(current_value - target_value_for_metrics);
+
+    // Check 2% settling band
+    if (current_error <= settling_tolerance_2percent) {
       if (!in_settling_band) {
         time_entered_settling_band = time_now;
         in_settling_band = true;
@@ -255,19 +330,40 @@ struct PerformanceMetrics {
         settling_time_2percent = time_entered_settling_band;
       }
     } else {
-      if (in_settling_band) {
+      // Don't reset immediately - allow brief excursions
+      if (in_settling_band && current_error > settling_tolerance_2percent * 2.0) {
         settling_time_2percent = -1.0;
+        in_settling_band = false;
+        time_entered_settling_band = -1.0;
       }
-      in_settling_band = false;
-      time_entered_settling_band = -1.0;
     }
+
+    // Check 5% settling band (more forgiving)
+    if (current_error <= settling_tolerance_5percent) {
+      if (!in_settling_band_5percent) {
+        time_entered_settling_band_5percent = time_now;
+        in_settling_band_5percent = true;
+      }
+      if (settling_time_5percent < 0.0) {
+        settling_time_5percent = time_entered_settling_band_5percent;
+      }
+    } else {
+      if (in_settling_band_5percent && current_error > settling_tolerance_5percent * 2.0) {
+        settling_time_5percent = -1.0;
+        in_settling_band_5percent = false;
+        time_entered_settling_band_5percent = -1.0;
+      }
+    }
+
+    // Track final steady state error (continuously updated)
+    final_steady_state_error = current_error;
   }
 
-  void
-  finalize_metrics_calculation(double phase_start_time_for_relative_metrics) {
+  void finalize_metrics_calculation(double phase_start_time_for_relative_metrics) {
     if (!phase_active_for_metrics)
       return;
 
+    // Calculate overshoot
     if (std::abs(target_value_for_metrics - initial_value_for_metrics) > 1e-6) {
       if (target_value_for_metrics > initial_value_for_metrics) {
         overshoot_percent =
@@ -290,23 +386,42 @@ struct PerformanceMetrics {
                1e-6)) {
         overshoot_percent = 0.0;
       }
-      if (overshoot_percent < 0)
-        overshoot_percent = 0.0;
+      overshoot_percent = std::max(overshoot_percent, 0.0);
     } else {
       overshoot_percent = 0.0;
     }
 
+    // Finalize settling times
     if (settling_time_2percent < 0.0 && in_settling_band) {
       settling_time_2percent = time_entered_settling_band;
     }
+    if (settling_time_5percent < 0.0 && in_settling_band_5percent) {
+      settling_time_5percent = time_entered_settling_band_5percent;
+    }
+
+    // Adjust times relative to phase start
     if (peak_time >= phase_start_time_for_relative_metrics)
       peak_time -= phase_start_time_for_relative_metrics;
     else
       peak_time = 0;
+    
     if (settling_time_2percent >= phase_start_time_for_relative_metrics)
       settling_time_2percent -= phase_start_time_for_relative_metrics;
     else if (settling_time_2percent >= 0.0)
       settling_time_2percent = 0.0;
+      
+    if (settling_time_5percent >= phase_start_time_for_relative_metrics)
+      settling_time_5percent -= phase_start_time_for_relative_metrics;
+    else if (settling_time_5percent >= 0.0)
+      settling_time_5percent = 0.0;
+
+    // Convert final steady state error to percentage of range
+    double range = std::abs(target_value_for_metrics - initial_value_for_metrics);
+    if (range > 1e-6) {
+      final_steady_state_error = (final_steady_state_error / range) * 100.0;
+    } else {
+      final_steady_state_error = (final_steady_state_error / std::max(std::abs(target_value_for_metrics), 1.0)) * 100.0;
+    }
   }
 };
 
@@ -487,7 +602,8 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig &config) {
       Ku = kp;
       Pu = result.period;
       break;
-    } else if (result.is_oscillating) {
+    }
+    if (result.is_oscillating) {
       std::cout << "Stable oscillations.\n";
     } else {
       std::cout << "No oscillations.\n";
@@ -499,33 +615,127 @@ void run_zn_auto_search(const agent_control_pkg::SimulationConfig &config) {
   if (Ku > 0 && Pu > 0) {
     std::cout << "Found Ultimate Gain (Ku) = " << Ku << "\n";
     std::cout << "Found Ultimate Period (Pu) = " << Pu << " s\n\n";
-    std::cout << "Recommended PID Gains (Classic Ziegler-Nichols):\n";
-    double final_kp = 0.6 * Ku;
-    double Ti = 0.5 * Pu;
-    double Td = 0.125 * Pu;
-    double final_ki = (Ti > 1e-9) ? (final_kp / Ti) : 0.0;
-    double final_kd = final_kp * Td;
-
-    std::cout << "  Kp = " << final_kp << "\n";
-    std::cout << "  Ki = " << final_ki << "\n";
-    std::cout << "  Kd = " << final_kd << "\n\n";
-    std::cout << "To use these, update the 'controller_settings' in your YAML "
-                 "file and disable all ZN tuning modes.\n";
-
+    
+    // Calculate multiple ZN tuning methods
+    struct ZNMethod {
+      std::string name;
+      double kp_factor;
+      double ti_factor; 
+      double td_factor;
+      std::string description;
+    };
+    
+    std::vector<ZNMethod> methods = {
+      {"Classic", 0.6, 0.5, 0.125, "Balanced response (original ZN)"},
+      {"Conservative", 0.45, 0.54, 0.15, "Less overshoot, slower response"},
+      {"LessOvershoot", 0.33, 0.5, 0.33, "Minimal overshoot method"},  
+      {"NoOvershoot", 0.2, 0.5, 0.33, "No overshoot (Tyreus-Luyben)"},
+      {"Aggressive", 0.8, 0.4, 0.1, "Fast response, more overshoot"},
+      {"ModernZN", 0.5, 0.8, 0.15, "Modern interpretation"}
+    };
+    
+    std::cout << "📊 RECOMMENDED PID GAINS (Multiple Methods):\n";
+    std::cout << "==================================================\n";
+    
     if (report_file.is_open()) {
       report_file << "\nKu," << Ku << "\nPu," << Pu << '\n';
-      report_file << "RecommendedKp," << final_kp << '\n';
-      report_file << "RecommendedKi," << final_ki << '\n';
-      report_file << "RecommendedKd," << final_kd << '\n';
+      report_file << "\nMethod,Kp,Ki,Kd,Description\n";
     }
+    
+    for (const auto& method : methods) {
+      double Ti = method.ti_factor * Pu;
+      double Td = method.td_factor * Pu;
+      
+      double kp = method.kp_factor * Ku;
+      double ki = (Ti > 1e-9) ? (kp / Ti) : 0.0;
+      double kd = kp * Td;
+      
+      std::cout << std::setw(15) << method.name << ": ";
+      std::cout << "Kp=" << std::fixed << std::setprecision(3) << kp;
+      std::cout << ", Ki=" << std::fixed << std::setprecision(3) << ki;  
+      std::cout << ", Kd=" << std::fixed << std::setprecision(3) << kd;
+      std::cout << " (" << method.description << ")\n";
+      
+      if (report_file.is_open()) {
+        report_file << method.name << "," << kp << "," << ki << "," << kd 
+                    << "," << method.description << '\n';
+      }
+    }
+    
+    std::cout << "\n🎯 QUICK TEST RECOMMENDATIONS:\n";
+    std::cout << "===============================\n";
+    std::cout << "1. For STABLE systems: Use 'Conservative' method\n";
+    std::cout << "2. For FAST response: Use 'Classic' method\n";
+    std::cout << "3. For NO overshoot: Use 'NoOvershoot' method\n";
+    std::cout << "4. For MODERN control: Use 'ModernZN' method\n\n";
+    
+    // Ask user if they want to test one of the methods automatically
+    std::cout << "🚀 AUTO-TEST OPTION:\n";
+    std::cout << "Do you want to automatically test one of these methods? (y/n): ";
+    
+    // For automated testing, we'll use the Classic method
+    // In a real interactive version, you could add user input here
+    char auto_test = 'n'; // Default to no auto-test for batch processing
+    
+    // Uncomment these lines for interactive mode:
+    // std::cin >> auto_test;
+    // if (auto_test == 'y' || auto_test == 'Y') {
+    if (false) { // Change to true if you want auto-testing
+      std::cout << "Which method to test? (1=Classic, 2=Conservative, 3=NoOvershoot): ";
+      int method_choice = 1; // Default to Classic
+      // std::cin >> method_choice;
+      
+      if (method_choice >= 1 && method_choice <= 3) {
+        auto selected_method = methods[method_choice - 1];
+        
+        double Ti = selected_method.ti_factor * Pu;
+        double Td = selected_method.td_factor * Pu;
+        double test_kp = selected_method.kp_factor * Ku;
+        double test_ki = (Ti > 1e-9) ? (test_kp / Ti) : 0.0;
+        double test_kd = test_kp * Td;
+        
+        std::cout << "\n🧪 TESTING " << selected_method.name << " METHOD:\n";
+        std::cout << "Kp=" << test_kp << ", Ki=" << test_ki << ", Kd=" << test_kd << "\n";
+        
+        // Create a modified config for testing
+        auto test_config = config;
+        test_config.pid_params.kp = test_kp;
+        test_config.pid_params.ki = test_ki;
+        test_config.pid_params.kd = test_kd;
+        test_config.zn_tuning_params.enable = false;
+        test_config.zn_tuning_params.enable_auto_search = false;
+        
+        // Run a test simulation with these parameters
+        std::cout << "Running test simulation...\n";
+        // This would require refactoring main() into a testable function
+        // For now, just show the parameters
+        
+        std::cout << "✅ Test parameters calculated. Update your YAML file with:\n";
+        std::cout << "controller_settings:\n";
+        std::cout << "  pid:\n";
+        std::cout << "    kp: " << test_kp << "\n";
+        std::cout << "    ki: " << test_ki << "\n";
+        std::cout << "    kd: " << test_kd << "\n";
+      }
+    }
+    
+    std::cout << "\n📝 To use these gains:\n";
+    std::cout << "1. Copy one of the parameter sets above\n";
+    std::cout << "2. Update 'controller_settings' in simulation_params.yaml\n";
+    std::cout << "3. Set both ZN enable flags to false\n";
+    std::cout << "4. Run simulation again to test performance\n";
+
   } else {
-    std::cout << "Could not find Ku within the specified Kp range."
-              << std::endl;
-    std::cout << "Try increasing 'auto_search_kp_max' or decreasing "
-                 "'auto_search_kp_step' in the YAML file."
-              << std::endl;
+    std::cout << "❌ Could not find Ku within the specified Kp range.\n";
+    std::cout << "💡 TROUBLESHOOTING:\n";
+    std::cout << "- Try increasing 'auto_search_kp_max' (currently " << params.auto_search_kp_max << ")\n";
+    std::cout << "- Try decreasing 'auto_search_kp_step' (currently " << params.auto_search_kp_step << ")\n";
+    std::cout << "- Try increasing 'simulation_time' (currently " << params.simulation_time << "s)\n";
+    std::cout << "- Check if your system is too stable or has too much damping\n";
+    
     if (report_file.is_open()) {
       report_file << "\nKu,Not found\nPu,Not found\n";
+      report_file << "Troubleshooting,Increase kp_max or decrease kp_step\n";
     }
   }
   std::cout << "============================================================\n";
@@ -571,15 +781,73 @@ int main() {
     }
   }
 
+  // --- CHECK FOR QUICK ZN METHOD TESTING ---
+  // Now reading from YAML configuration instead of hardcoded values
+  std::string quick_method = config.zn_tuning_params.quick_method_test;
+  double manual_ku = config.zn_tuning_params.manual_ku;
+  double manual_pu = config.zn_tuning_params.manual_pu;
+  
+  bool using_quick_zn_method = false;
   double kp_actual, ki_actual, kd_actual;
+  
   if (ZN_TUNING_ACTIVE) {
     kp_actual = ZN_KP_TEST_VALUE;
     ki_actual = 0.0;
     kd_actual = 0.0;
+    std::cout << "🔧 ZN Manual Testing Mode: Kp=" << kp_actual << ", Ki=0, Kd=0\n";
   } else {
-    kp_actual = config.pid_params.kp;
-    ki_actual = config.pid_params.ki;
-    kd_actual = config.pid_params.kd;
+    // Check if user wants to use a quick ZN method from YAML config
+    
+    if (quick_method != "Off") {
+      using_quick_zn_method = true;
+      
+      // ZN method definitions (same as in auto-search)
+      struct ZNMethod {
+        std::string name;
+        double kp_factor;
+        double ti_factor; 
+        double td_factor;
+        std::string description;
+      };
+      
+      std::vector<ZNMethod> methods = {
+        {"Classic", 0.6, 0.5, 0.125, "Balanced response (original ZN)"},
+        {"Conservative", 0.45, 0.54, 0.15, "Less overshoot, slower response"},
+        {"LessOvershoot", 0.33, 0.5, 0.33, "Minimal overshoot method"},  
+        {"NoOvershoot", 0.2, 0.5, 0.33, "No overshoot (Tyreus-Luyben)"},
+        {"Aggressive", 0.8, 0.4, 0.1, "Fast response, more overshoot"},
+        {"ModernZN", 0.5, 0.8, 0.15, "Modern interpretation"}
+      };
+      
+      // Find the selected method
+      auto method_it = std::find_if(methods.begin(), methods.end(),
+        [&quick_method](const ZNMethod& m) { return m.name == quick_method; });
+      
+      if (method_it != methods.end()) {
+        double Ti = method_it->ti_factor * manual_pu;
+        double Td = method_it->td_factor * manual_pu;
+        
+        kp_actual = method_it->kp_factor * manual_ku;
+        ki_actual = (Ti > 1e-9) ? (kp_actual / Ti) : 0.0;
+        kd_actual = kp_actual * Td;
+        
+        std::cout << "🎯 QUICK ZN METHOD ACTIVE: " << method_it->name << "\n";
+        std::cout << "   Using Ku=" << manual_ku << ", Pu=" << manual_pu << "\n";
+        std::cout << "   Calculated PID: Kp=" << std::fixed << std::setprecision(3) << kp_actual;
+        std::cout << ", Ki=" << ki_actual << ", Kd=" << kd_actual << "\n";
+        std::cout << "   Description: " << method_it->description << "\n\n";
+      } else {
+        std::cout << "⚠️  Unknown ZN method '" << quick_method << "', using regular PID settings\n";
+        using_quick_zn_method = false;
+      }
+    }
+    
+    if (!using_quick_zn_method) {
+      // Use regular PID parameters from config
+      kp_actual = config.pid_params.kp;
+      ki_actual = config.pid_params.ki;
+      kd_actual = config.pid_params.kd;
+    }
   }
 
   if (config.phases.empty() && !ZN_TUNING_ACTIVE) {
@@ -990,7 +1258,14 @@ int main() {
                       ? std::to_string(
                             drone_metrics_x[i][p_idx].settling_time_2percent)
                       : "N/A")
+              << "s, ST(5%)="
+              << (drone_metrics_x[i][p_idx].settling_time_5percent >= 0
+                      ? std::to_string(
+                            drone_metrics_x[i][p_idx].settling_time_5percent)
+                      : "N/A")
               << "s"
+              << ", SSE=" << std::fixed << std::setprecision(1)
+              << drone_metrics_x[i][p_idx].final_steady_state_error << "%"
               << ", Peak=" << std::fixed << std::setprecision(2)
               << drone_metrics_x[i][p_idx].peak_value << " @ "
               << drone_metrics_x[i][p_idx].peak_time << "s"
@@ -1004,7 +1279,14 @@ int main() {
                       ? std::to_string(
                             drone_metrics_y[i][p_idx].settling_time_2percent)
                       : "N/A")
+              << "s, ST(5%)="
+              << (drone_metrics_y[i][p_idx].settling_time_5percent >= 0
+                      ? std::to_string(
+                            drone_metrics_y[i][p_idx].settling_time_5percent)
+                      : "N/A")
               << "s"
+              << ", SSE=" << std::fixed << std::setprecision(1)
+              << drone_metrics_y[i][p_idx].final_steady_state_error << "%"
               << ", Peak=" << std::fixed << std::setprecision(2)
               << drone_metrics_y[i][p_idx].peak_value << " @ "
               << drone_metrics_y[i][p_idx].peak_time << "s"

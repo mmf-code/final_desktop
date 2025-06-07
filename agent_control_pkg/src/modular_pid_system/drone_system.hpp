@@ -95,7 +95,7 @@ private:
     // Helper method for configuring fuzzy logic systems
     void configureFuzzyLogicSystem(agent_control_pkg::GT2FuzzyLogicSystem& fls, 
                                  const agent_control_pkg::FuzzyParams& params);
-    void configureFuzzyLogicSystemDirect(agent_control_pkg::GT2FuzzyLogicSystem& fls);
+    static void configureFuzzyLogicSystemDirect(agent_control_pkg::GT2FuzzyLogicSystem& fls);
     
 public:
     DroneController();

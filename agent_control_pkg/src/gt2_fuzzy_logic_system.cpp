@@ -5,7 +5,6 @@
 #include <vector>    // For std::vector
 #include <iostream>  // For std::cout (if DEBUG_FLS) and std::cerr (for errors)
 #include <limits>    // For std::numeric_limits
-#include <numeric>   // For std::accumulate
 
 // Conditional cout for debugging
 #ifdef DEBUG_FLS
@@ -43,7 +42,7 @@ void GT2FuzzyLogicSystem::addOutputVariable(const std::string &var_name) {
 void GT2FuzzyLogicSystem::addFuzzySetToVariable(
     const std::string &var_name, const std::string &set_name,
     const IT2TriangularFS_FOU &fou) {
-  if (fuzzy_sets_.count(var_name)) {
+  if (fuzzy_sets_.count(var_name) > 0) {
     fuzzy_sets_[var_name][set_name] = fou;
     FLS_LOG("GT2FLS: Added set '" << set_name << "' to variable '" << var_name
                                   << "'" << std::endl);
@@ -83,8 +82,7 @@ GT2FuzzyLogicSystem::getTriangularMembership(double crisp_input, double l_left,
     }
   } else if (std::abs(crisp_input - l_peak) < 1e-9 &&
              !(l_peak - l_left > 1e-9)) {
-    if (lower_mu < 1.0)
-      lower_mu = 1.0;
+    lower_mu = std::max(lower_mu, 1.0);
   }
 
   // Upper Membership Function (Triangle)
@@ -101,15 +99,11 @@ GT2FuzzyLogicSystem::getTriangularMembership(double crisp_input, double l_left,
     }
   } else if (std::abs(crisp_input - u_peak) < 1e-9 &&
              !(u_peak - u_left > 1e-9)) {
-    if (upper_mu < 1.0)
-      upper_mu = 1.0;
+    upper_mu = std::max(upper_mu, 1.0);
   }
 
-  if (lower_mu > upper_mu) {
-    // std::cerr << "Warning: LMF > UMF in getTriangularMembership. Clamping.
-    // Input: " << crisp_input << std::endl;
-    lower_mu = upper_mu;
-  }
+  // Ensure lower <= upper membership
+  lower_mu = std::min(lower_mu, upper_mu);
   lower_mu = std::max(0.0, std::min(lower_mu, 1.0));
   upper_mu = std::max(0.0, std::min(upper_mu, 1.0));
 
@@ -129,12 +123,12 @@ GT2FuzzyLogicSystem::fuzzifyInputs(double crisp_error, double crisp_dError,
   std::map<std::string, MembershipInterval> dError_memberships;
   std::map<std::string, MembershipInterval> wind_memberships;
 
-  if (fuzzy_sets_.count("error")) {
+  if (fuzzy_sets_.count("error") > 0) {
     FLS_LOG("  Fuzzifying error input: " << crisp_error << std::endl);
     for (const auto &pair : fuzzy_sets_.at("error")) {
       const std::string &set_name = pair.first;
       const IT2TriangularFS_FOU &fou = pair.second;
-      error_memberships[set_name] = getTriangularMembership(
+      error_memberships[set_name] = GT2FuzzyLogicSystem::getTriangularMembership(
           crisp_error, fou.lmf_left_base, fou.lmf_peak, fou.lmf_right_base,
           fou.umf_left_base, fou.umf_peak, fou.umf_right_base);
       FLS_LOG("    Error Set '"
@@ -142,12 +136,12 @@ GT2FuzzyLogicSystem::fuzzifyInputs(double crisp_error, double crisp_dError,
               << error_memberships[set_name].second << "]" << std::endl);
     }
   }
-  if (fuzzy_sets_.count("dError")) {
+  if (fuzzy_sets_.count("dError") > 0) {
     FLS_LOG("  Fuzzifying dError input: " << crisp_dError << std::endl);
     for (const auto &pair : fuzzy_sets_.at("dError")) {
       const std::string &set_name = pair.first;
       const IT2TriangularFS_FOU &fou = pair.second;
-      dError_memberships[set_name] = getTriangularMembership(
+      dError_memberships[set_name] = GT2FuzzyLogicSystem::getTriangularMembership(
           crisp_dError, fou.lmf_left_base, fou.lmf_peak, fou.lmf_right_base,
           fou.umf_left_base, fou.umf_peak, fou.umf_right_base);
       FLS_LOG("    dError Set '" << set_name << "': ["
@@ -156,12 +150,12 @@ GT2FuzzyLogicSystem::fuzzifyInputs(double crisp_error, double crisp_dError,
                                  << std::endl);
     }
   }
-  if (fuzzy_sets_.count("wind")) {
+  if (fuzzy_sets_.count("wind") > 0) {
     FLS_LOG("  Fuzzifying wind input: " << crisp_wind << std::endl);
     for (const auto &pair : fuzzy_sets_.at("wind")) {
       const std::string &set_name = pair.first;
       const IT2TriangularFS_FOU &fou = pair.second;
-      wind_memberships[set_name] = getTriangularMembership(
+      wind_memberships[set_name] = GT2FuzzyLogicSystem::getTriangularMembership(
           crisp_wind, fou.lmf_left_base, fou.lmf_peak, fou.lmf_right_base,
           fou.umf_left_base, fou.umf_peak, fou.umf_right_base);
       FLS_LOG("    Wind Set '"
@@ -197,7 +191,7 @@ GT2FuzzyLogicSystem::calculateRuleFirings(
     return fired_rules_info;
   }
   if (output_variable_name_.empty() ||
-      !fuzzy_sets_.count(output_variable_name_)) {
+      fuzzy_sets_.count(output_variable_name_) == 0) {
     std::cerr
         << "GT2FLS Error: Output variable or its sets not defined correctly."
         << std::endl;
@@ -248,7 +242,7 @@ GT2FuzzyLogicSystem::calculateRuleFirings(
     if (can_evaluate_this_rule && rule_firing_strength.second > 1e-9) {
       const std::string &output_set_name = rule.consequent.second;
 
-      if (fuzzy_sets_.at(output_variable_name_).count(output_set_name)) {
+      if (fuzzy_sets_.at(output_variable_name_).count(output_set_name) > 0) {
         const IT2TriangularFS_FOU &consequent_fou =
             fuzzy_sets_.at(output_variable_name_).at(output_set_name);
         double consequent_centroid =
@@ -436,10 +430,10 @@ double GT2FuzzyLogicSystem::calculateOutput(double crisp_error,
 
   // 3. Type Reduction (Karnik-Mendel)
   std::pair<double, double> type_reduced_interval =
-      typeReduce_KarnikMendel(fired_rules);
+      GT2FuzzyLogicSystem::typeReduce_KarnikMendel(fired_rules);
 
   // 4. Defuzzification (Average of interval)
-  double crisp_output = defuzzify(type_reduced_interval);
+  double crisp_output = GT2FuzzyLogicSystem::defuzzify(type_reduced_interval);
 
   FLS_LOG("GT2FLS Final Crisp Output: " << crisp_output << std::endl);
   FLS_LOG("--- GT2FLS Calculation End ---\n" << std::endl);

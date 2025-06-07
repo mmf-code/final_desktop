@@ -67,7 +67,7 @@ void PerformanceMetrics::update(double current_value, double time_now) {
     double settling_range = std::abs(target_value - initial_value);
     double settling_tolerance = settling_range * SETTLING_PERCENTAGE;
     
-    if (settling_tolerance < 1e-4) settling_tolerance = 1e-4;
+    settling_tolerance = std::max(settling_tolerance, 1e-4);
     
     if (std::abs(current_value - target_value) <= settling_tolerance) {
         if (settling_time_2percent < 0.0) {
@@ -142,10 +142,10 @@ void DroneController::initializeFuzzyLogic(const std::string& fuzzy_config_file)
     std::cout << "DEBUG: Initializing fuzzy logic directly with proven configuration..." << std::endl;
     
     // Configure FLS for X-axis with proven working configuration
-    configureFuzzyLogicSystemDirect(fls_x_);
+    DroneController::configureFuzzyLogicSystemDirect(fls_x_);
     
     // Configure FLS for Y-axis (same rules and sets)
-    configureFuzzyLogicSystemDirect(fls_y_);
+    DroneController::configureFuzzyLogicSystemDirect(fls_y_);
     
     std::cout << "Fuzzy Logic System initialized with 21 rules using direct configuration" << std::endl;
 }
@@ -226,7 +226,7 @@ void DroneController::configureFuzzyLogicSystem(agent_control_pkg::GT2FuzzyLogic
     
     if (params.sets.empty() || params.rules.empty()) {
         std::cout << "YAML params empty, using direct configuration..." << std::endl;
-        configureFuzzyLogicSystemDirect(fls);
+        DroneController::configureFuzzyLogicSystemDirect(fls);
         return;
     }
     
