@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
     agent_control_pkg::SimulationConfig config =
         agent_control_pkg::ConfigReader::loadConfig("simulation_params.yaml");
     // >>> ZIEGLER-NICHOLS TUNING SECTION - SETTINGS FOR Ku/Pu FINDING <<<
-    const bool ZN_TUNING_ACTIVE = false;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
+    const bool ZN_TUNING_ACTIVE = true;  // SET TO false FOR NORMAL RUN WITH Z-N GAINS
                                          // WHEN true, FLS WILL BE OFF, AND PID WILL BE P-ONLY
 
     // Current Kp being tested for Z-N (not used when ZN_TUNING_ACTIVE is false)

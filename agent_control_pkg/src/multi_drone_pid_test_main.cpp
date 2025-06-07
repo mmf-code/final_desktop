@@ -11,12 +11,14 @@
 #include <sstream>
 #include <map>
 #include <array>
+// --- START: New includes for file I/O and paths ---
 #include <chrono>
 #include <filesystem>
 #include <numeric>
+// --- END: New includes ---
 
 // --- Start: Local FLS helper structs and functions (specific to this main file) ---
-// These are kept local as per your original structure for this file.
+// ... (This section remains unchanged, so it's omitted for brevity) ...
 struct FuzzySetFOU_Local {
     double l1, l2, l3, u1, u2, u3;
 };
@@ -133,6 +135,7 @@ static void applyFuzzyParamsLocal(agent_control_pkg::GT2FuzzyLogicSystem& fls, c
 // --- End: Local FLS helper structs and functions ---
 
 // --- FakeDrone Struct ---
+// ... (This section remains unchanged) ...
 struct FakeDrone {
     double position_x = 0.0;
     double position_y = 0.0;
@@ -153,6 +156,7 @@ struct FakeDrone {
 };
 
 // --- PerformanceMetrics Struct ---
+// ... (This section remains unchanged) ...
 struct PerformanceMetrics {
     double peak_value = 0.0;
     double peak_time = 0.0;
@@ -165,7 +169,7 @@ struct PerformanceMetrics {
     bool phase_active_for_metrics = false;
 
     void reset(double initial_val, double target_val) {
-        peak_value = initial_val; 
+        peak_value = initial_val;
         peak_time = 0.0;
         overshoot_percent = 0.0;
         settling_time_2percent = -1.0;
@@ -179,51 +183,51 @@ struct PerformanceMetrics {
     void update_metrics(double current_value, double time_now) {
         if (!phase_active_for_metrics) return;
 
-        if (target_value_for_metrics > initial_value_for_metrics) { 
+        if (target_value_for_metrics > initial_value_for_metrics) {
             if (current_value > peak_value) { peak_value = current_value; peak_time = time_now; }
-        } else if (target_value_for_metrics < initial_value_for_metrics) { 
+        } else if (target_value_for_metrics < initial_value_for_metrics) {
              if (current_value < peak_value) { peak_value = current_value; peak_time = time_now; }
-        } else { 
-            peak_value = initial_value_for_metrics; 
+        } else {
+            peak_value = initial_value_for_metrics;
         }
 
         const double SETTLING_PERCENTAGE = 0.02;
         double settling_range_abs = std::abs(target_value_for_metrics - initial_value_for_metrics);
         double settling_tolerance;
 
-        if (settling_range_abs < 1e-3 && std::abs(target_value_for_metrics) > 1e-9) { 
-             settling_tolerance = std::abs(target_value_for_metrics * 0.10); 
-        } else if (settling_range_abs < 1e-3) { 
-             settling_tolerance = 0.05; 
-        } else { 
+        if (settling_range_abs < 1e-3 && std::abs(target_value_for_metrics) > 1e-9) {
+             settling_tolerance = std::abs(target_value_for_metrics * 0.10);
+        } else if (settling_range_abs < 1e-3) {
+             settling_tolerance = 0.05;
+        } else {
              settling_tolerance = settling_range_abs * SETTLING_PERCENTAGE;
         }
-        if (settling_tolerance < 1e-4) settling_tolerance = 1e-4; 
+        if (settling_tolerance < 1e-4) settling_tolerance = 1e-4;
 
         if (std::abs(current_value - target_value_for_metrics) <= settling_tolerance) {
             if (!in_settling_band) {
                 time_entered_settling_band = time_now;
                 in_settling_band = true;
             }
-            if (settling_time_2percent < 0.0) { 
+            if (settling_time_2percent < 0.0) {
                 settling_time_2percent = time_entered_settling_band;
             }
         } else {
-            if (in_settling_band) { 
-                settling_time_2percent = -1.0; 
+            if (in_settling_band) {
+                settling_time_2percent = -1.0;
             }
             in_settling_band = false;
-            time_entered_settling_band = -1.0; 
+            time_entered_settling_band = -1.0;
         }
     }
 
     void finalize_metrics_calculation(double phase_start_time_for_relative_metrics) {
         if (!phase_active_for_metrics) return;
 
-        if (std::abs(target_value_for_metrics - initial_value_for_metrics) > 1e-6) { 
-            if (target_value_for_metrics > initial_value_for_metrics) { 
+        if (std::abs(target_value_for_metrics - initial_value_for_metrics) > 1e-6) {
+            if (target_value_for_metrics > initial_value_for_metrics) {
                 overshoot_percent = ((peak_value - target_value_for_metrics) / (target_value_for_metrics - initial_value_for_metrics)) * 100.0;
-            } else { 
+            } else {
                 overshoot_percent = ((target_value_for_metrics - peak_value) / (initial_value_for_metrics - target_value_for_metrics)) * 100.0;
             }
             
@@ -232,9 +236,9 @@ struct PerformanceMetrics {
                  (std::abs(peak_value - initial_value_for_metrics) < 1e-6 && std::abs(target_value_for_metrics - initial_value_for_metrics) > 1e-6 ) ) {
                 overshoot_percent = 0.0;
             }
-            if (overshoot_percent < 0) overshoot_percent = 0.0; 
+            if (overshoot_percent < 0) overshoot_percent = 0.0;
         } else {
-            overshoot_percent = 0.0; 
+            overshoot_percent = 0.0;
         }
 
         if (settling_time_2percent < 0.0 && in_settling_band) {
@@ -247,12 +251,13 @@ struct PerformanceMetrics {
 };
 
 // --- Custom Clamp Function ---
+// ... (This section remains unchanged) ...
 template<typename T>
 T clamp(T value, T min_val, T max_val) {
     return std::max(min_val, std::min(value, max_val));
 }
 
-// --- Timestamp for filenames ---
+// --- NEW: Timestamp for filenames ---
 static std::string getCurrentTimestamp() {
     auto now = std::chrono::system_clock::now();
     std::time_t tt = std::chrono::system_clock::to_time_t(now);
@@ -268,37 +273,41 @@ static std::string getCurrentTimestamp() {
 }
 
 // --- Function to setup default configuration if YAML fails ---
+// ... (This section remains unchanged, but you would add the new CSV fields here too) ...
 agent_control_pkg::SimulationConfig get_default_simulation_config() {
     std::cout << "WARNING: Using internal default simulation parameters." << std::endl;
     agent_control_pkg::SimulationConfig defaultConfig;
     defaultConfig.initial_positions.push_back({0.0,0.0});
     defaultConfig.phases.push_back({{5.0,0.0}, 0.0});
     defaultConfig.total_time = 15.0;
+    // --- START: Add defaults for new params ---
+    defaultConfig.csv_enabled = true;
+    defaultConfig.output_directory = "output";
+    defaultConfig.csv_prefix = "sim_data";
+    defaultConfig.metrics_prefix = "metrics_report";
+    // --- END: Add defaults for new params ---
     return defaultConfig;
 }
 
-// --- NEW: Struct to hold the analysis result of a single ZN simulation ---
+// ... (ZN Tuning functions remain unchanged) ...
 struct ZN_AnalysisResult {
     bool is_unstable = false;
     bool is_oscillating = false;
     double period = 0.0;
 };
 
-// --- NEW: Function to analyze error history for oscillations ---
 ZN_AnalysisResult analyze_for_oscillations(const std::vector<std::pair<double, double>>& error_history) {
     std::vector<double> peaks;
     std::vector<double> peak_times;
-    const double start_analysis_time = 2.0; // Ignore initial transient
+    const double start_analysis_time = 2.0; 
 
     for (size_t i = 1; i < error_history.size() - 1; ++i) {
         double current_time = error_history[i].first;
         double current_error = error_history[i].second;
         if (current_time < start_analysis_time) continue;
 
-        // Find a peak (local maximum of absolute error that crosses zero)
         if (std::abs(current_error) > std::abs(error_history[i - 1].second) && 
             std::abs(current_error) > std::abs(error_history[i + 1].second)) {
-            // Check that it's a true zero-crossing peak
             if ( (current_error > 0 && error_history[i-1].second <= 0) || 
                  (current_error < 0 && error_history[i-1].second >= 0) || peaks.empty() ) {
                 peaks.push_back(std::abs(current_error));
@@ -308,27 +317,24 @@ ZN_AnalysisResult analyze_for_oscillations(const std::vector<std::pair<double, d
     }
 
     if (peaks.size() < 3) {
-        return {false, !peaks.empty(), 0.0}; // Not enough peaks to determine stability
+        return {false, !peaks.empty(), 0.0};
     }
     
-    // Check if system is unstable by comparing the last two valid peaks
     double last_peak = peaks.back();
     double second_last_peak = peaks[peaks.size() - 2];
     
-    // If the last peak's amplitude is greater than the previous one, it's unstable
     if (last_peak > second_last_peak) {
         double estimated_period = peak_times.back() - peak_times[peak_times.size() - 2];
         return {true, true, estimated_period};
     }
 
-    return {false, true, 0.0}; // Oscillating but stable
+    return {false, true, 0.0};
 }
 
-// --- NEW: Function to run a single, simplified simulation for ZN auto-search ---
 ZN_AnalysisResult run_single_zn_simulation(double kp_test, const agent_control_pkg::SimulationConfig& config) {
     FakeDrone drone;
     drone.position_x = 0.0;
-    agent_control_pkg::PIDController pid_x(kp_test, 0.0, 0.0, -10.0, 10.0, 5.0); // Fixed step input
+    agent_control_pkg::PIDController pid_x(kp_test, 0.0, 0.0, -10.0, 10.0, 5.0);
 
     std::vector<std::pair<double, double>> error_history;
     double dt = config.dt;
@@ -343,7 +349,6 @@ ZN_AnalysisResult run_single_zn_simulation(double kp_test, const agent_control_p
     return analyze_for_oscillations(error_history);
 }
 
-// --- NEW: Main function for the automated ZN search ---
 void run_zn_auto_search(const agent_control_pkg::SimulationConfig& config) {
     std::cout << "\n=========== STARTING ZIEGLER-NICHOLS AUTO-SEARCH ===========\n";
     const auto& params = config.zn_tuning_params;
@@ -488,7 +493,7 @@ int main() {
     std::vector<bool> phase_has_been_active(num_metric_phases, false);
     std::vector<double> phase_actual_start_times(num_metric_phases, 0.0);
 
-    // --- File Naming & Output ---
+    // --- START: MODIFIED SECTION for File Naming & Output ---
     std::string timestamp = getCurrentTimestamp();
     std::string base_filename_prefix_val = ZN_TUNING_ACTIVE ? "zn_test" : config.csv_prefix;
     std::string directory_path_str = config.output_directory;
@@ -500,7 +505,7 @@ int main() {
         std::filesystem::create_directories(output_dir_path);
     } catch (const std::exception& e) {
         std::cerr << "Filesystem error creating directory: " << e.what() << std::endl;
-        output_dir_path = ".";
+        output_dir_path = "."; // Fallback to current directory
     }
 
     std::ostringstream oss_filename_suffix;
@@ -554,7 +559,8 @@ int main() {
             metrics_file_stream << "Objective: Observe Drone 0 X-axis for sustained oscillations after first setpoint change.\n";
          }
     }
-    
+    // --- END: MODIFIED SECTION ---
+
     // --- Simulation Start & Main Loop ---
     std::cout << "Starting simulation..." << std::endl;
     if (ZN_TUNING_ACTIVE) {
@@ -636,7 +642,9 @@ int main() {
             }
         }
 
+        // --- START: MODIFIED - Write to CSV file ---
         if(config.csv_enabled && csv_file.is_open()) csv_file << time_now;
+        // --- END: MODIFIED ---
 
         for (int i = 0; i < NUM_DRONES; ++i) {
             double error_x = pid_x_controllers[i].getSetpoint() - drones[i].position_x;
@@ -665,15 +673,19 @@ int main() {
                 drone_metrics_x[i][current_phase_idx].update_metrics(drones[i].position_x, time_now);
                 drone_metrics_y[i][current_phase_idx].update_metrics(drones[i].position_y, time_now);
             }
+             // --- START: MODIFIED - Write drone data to CSV ---
              if(config.csv_enabled && csv_file.is_open()){
                 csv_file << "," << pid_x_controllers[i].getSetpoint() << "," << drones[i].position_x << "," << error_x << "," << terms_x.total_output
                          << "," << fls_correction_x << "," << final_cmd_x << "," << terms_x.p << "," << terms_x.i << "," << terms_x.d
                          << "," << pid_y_controllers[i].getSetpoint() << "," << drones[i].position_y << "," << error_y << "," << terms_y.total_output
                          << "," << fls_correction_y << "," << final_cmd_y << "," << terms_y.p << "," << terms_y.i << "," << terms_y.d;
             }
+            // --- END: MODIFIED ---
         }
+        // --- START: MODIFIED - Write wind data and newline to CSV ---
         if (config.csv_enabled && csv_file.is_open() && ENABLE_WIND_ACTUAL) csv_file << "," << simulated_wind_x << "," << simulated_wind_y;
         if (config.csv_enabled && csv_file.is_open()) csv_file << "\n";
+        // --- END: MODIFIED ---
         
         if (config.console_output_enabled && (time_now - last_console_print_time >= config.console_update_interval - dt/2.0 ) ) {
              if (NUM_DRONES > 0) { 
@@ -692,7 +704,9 @@ int main() {
              last_console_print_time = time_now;
         }
     }
+    // --- START: MODIFIED - Close file handles ---
     if(csv_file.is_open()) csv_file.close();
+    // --- END: MODIFIED ---
 
     // --- Finalize and Print/Save Metrics ---
     std::cout << "\n--- FINAL PERFORMANCE METRICS ---" << std::endl;
@@ -734,7 +748,9 @@ int main() {
         }
     }
 
+    // --- START: MODIFIED - Close file handles ---
     if(metrics_file_stream.is_open()) metrics_file_stream.close();
+    // --- END: MODIFIED ---
 
     std::cout << "\nMulti-Drone Test complete." << std::endl;
     return 0;

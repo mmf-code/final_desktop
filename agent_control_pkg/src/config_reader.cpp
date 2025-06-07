@@ -73,9 +73,8 @@ std::string findConfigFilePath(const std::string& filename) {
     return filename; // Fallback
 }
 
-
 SimulationConfig ConfigReader::loadConfig(const std::string& config_filepath) {
-    SimulationConfig config; // Initialize with defaults
+    SimulationConfig config; // Initialize with defaults from the header
     std::string actual_filepath = findConfigFilePath(config_filepath);
 
     YAML::Node root_node;
@@ -88,7 +87,7 @@ SimulationConfig ConfigReader::loadConfig(const std::string& config_filepath) {
         return config; // Return default config
     }
 
-    // Load each section
+    // Load each section, calling the respective private helper method
     if (root_node["simulation_settings"]) { loadSimulationSettings(root_node["simulation_settings"], config); }
     if (root_node["controller_settings"]) { loadControllerSettings(root_node["controller_settings"], config); }
     if (root_node["scenario_settings"]) { loadScenarioSettings(root_node["scenario_settings"], config); }
@@ -102,21 +101,21 @@ void ConfigReader::loadSimulationSettings(const YAML::Node& node, SimulationConf
         std::cerr << "Warning: 'simulation_settings' node is not a map. Skipping." << std::endl;
         return;
     }
-    if (node["dt"]) config.dt = node["dt"].as<double>(config.dt);
-    if (node["total_time"]) config.total_time = node["total_time"].as<double>(config.total_time);
-    if (node["num_drones"]) config.num_drones = node["num_drones"].as<int>(config.num_drones);
+    config.dt = node["dt"].as<double>(config.dt);
+    config.total_time = node["total_time"].as<double>(config.total_time);
+    config.num_drones = node["num_drones"].as<int>(config.num_drones);
 
     if (node["ziegler_nichols_tuning"]) {
-        YAML::Node zn_node = node["ziegler_nichols_tuning"];
-        if (zn_node["enable"]) config.zn_tuning_params.enable = zn_node["enable"].as<bool>(config.zn_tuning_params.enable);
-        if (zn_node["kp_test_value"]) config.zn_tuning_params.kp_test_value = zn_node["kp_test_value"].as<double>(config.zn_tuning_params.kp_test_value);
-        if (zn_node["simulation_time"]) config.zn_tuning_params.simulation_time = zn_node["simulation_time"].as<double>(config.zn_tuning_params.simulation_time);
+        const YAML::Node& zn_node = node["ziegler_nichols_tuning"];
+        config.zn_tuning_params.enable = zn_node["enable"].as<bool>(config.zn_tuning_params.enable);
+        config.zn_tuning_params.kp_test_value = zn_node["kp_test_value"].as<double>(config.zn_tuning_params.kp_test_value);
+        config.zn_tuning_params.simulation_time = zn_node["simulation_time"].as<double>(config.zn_tuning_params.simulation_time);
         
-        // --- ADDED: Load auto-search parameters ---
-        if (zn_node["enable_auto_search"]) config.zn_tuning_params.enable_auto_search = zn_node["enable_auto_search"].as<bool>(config.zn_tuning_params.enable_auto_search);
-        if (zn_node["auto_search_kp_start"]) config.zn_tuning_params.auto_search_kp_start = zn_node["auto_search_kp_start"].as<double>(config.zn_tuning_params.auto_search_kp_start);
-        if (zn_node["auto_search_kp_step"]) config.zn_tuning_params.auto_search_kp_step = zn_node["auto_search_kp_step"].as<double>(config.zn_tuning_params.auto_search_kp_step);
-        if (zn_node["auto_search_kp_max"]) config.zn_tuning_params.auto_search_kp_max = zn_node["auto_search_kp_max"].as<double>(config.zn_tuning_params.auto_search_kp_max);
+        // Load auto-search parameters
+        config.zn_tuning_params.enable_auto_search = zn_node["enable_auto_search"].as<bool>(config.zn_tuning_params.enable_auto_search);
+        config.zn_tuning_params.auto_search_kp_start = zn_node["auto_search_kp_start"].as<double>(config.zn_tuning_params.auto_search_kp_start);
+        config.zn_tuning_params.auto_search_kp_step = zn_node["auto_search_kp_step"].as<double>(config.zn_tuning_params.auto_search_kp_step);
+        config.zn_tuning_params.auto_search_kp_max = zn_node["auto_search_kp_max"].as<double>(config.zn_tuning_params.auto_search_kp_max);
     }
 }
 
@@ -126,17 +125,17 @@ void ConfigReader::loadControllerSettings(const YAML::Node& node, SimulationConf
         return;
     }
     if (node["pid"]) {
-        YAML::Node pid_node = node["pid"];
-        if (pid_node["kp"]) config.pid_params.kp = pid_node["kp"].as<double>(config.pid_params.kp);
-        if (pid_node["ki"]) config.pid_params.ki = pid_node["ki"].as<double>(config.pid_params.ki);
-        if (pid_node["kd"]) config.pid_params.kd = pid_node["kd"].as<double>(config.pid_params.kd);
-        if (pid_node["output_min"]) config.pid_params.output_min = pid_node["output_min"].as<double>(config.pid_params.output_min);
-        if (pid_node["output_max"]) config.pid_params.output_max = pid_node["output_max"].as<double>(config.pid_params.output_max);
+        const YAML::Node& pid_node = node["pid"];
+        config.pid_params.kp = pid_node["kp"].as<double>(config.pid_params.kp);
+        config.pid_params.ki = pid_node["ki"].as<double>(config.pid_params.ki);
+        config.pid_params.kd = pid_node["kd"].as<double>(config.pid_params.kd);
+        config.pid_params.output_min = pid_node["output_min"].as<double>(config.pid_params.output_min);
+        config.pid_params.output_max = pid_node["output_max"].as<double>(config.pid_params.output_max);
     }
     if (node["fls"]) {
-        YAML::Node fls_node = node["fls"];
-        if (fls_node["enable"]) config.enable_fls = fls_node["enable"].as<bool>(config.enable_fls);
-        if (fls_node["params_file"]) config.fuzzy_params_file = fls_node["params_file"].as<std::string>(config.fuzzy_params_file);
+        const YAML::Node& fls_node = node["fls"];
+        config.enable_fls = fls_node["enable"].as<bool>(config.enable_fls);
+        config.fuzzy_params_file = fls_node["params_file"].as<std::string>(config.fuzzy_params_file);
     }
 }
 
@@ -145,12 +144,11 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
         std::cerr << "Warning: 'scenario_settings' node is not a map. Skipping." << std::endl;
         return;
     }
-    if (node["enable_wind"]) config.wind_enabled = node["enable_wind"].as<bool>(config.wind_enabled);
-    
-    if (node["formation_side_length"]) config.formation_side_length = node["formation_side_length"].as<double>(config.formation_side_length);
+    config.wind_enabled = node["enable_wind"].as<bool>(config.wind_enabled);
+    config.formation_side_length = node["formation_side_length"].as<double>(config.formation_side_length);
 
     if (node["formation"] && node["formation"]["initial_positions"]) {
-        YAML::Node ip_node = node["formation"]["initial_positions"];
+        const YAML::Node& ip_node = node["formation"]["initial_positions"];
         if (ip_node.IsMap()) {
             config.initial_positions.clear(); 
             for (int i = 0; i < config.num_drones; ++i) {
@@ -161,25 +159,22 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
                         ip_node[drone_key][1].as<double>()
                     });
                 } else {
-                    std::cerr << "Warning: Initial position for " << drone_key << " missing/malformed. Using default (0,0) for it." << std::endl;
+                    std::cerr << "Warning: Initial position for " << drone_key << " missing/malformed. Adding default (0,0)." << std::endl;
                     config.initial_positions.push_back({0.0, 0.0});
                 }
             }
             while(config.initial_positions.size() < (size_t)config.num_drones) {
                  config.initial_positions.push_back({0.0,0.0});
             }
-        } else {
-            std::cerr << "Warning: 'formation.initial_positions' is not a map. Using default positions." << std::endl;
         }
-    } else {
-         std::cerr << "Warning: 'formation.initial_positions' not found. Using default positions." << std::endl;
     }
     
-    if (config.initial_positions.size() != (size_t)config.num_drones && config.num_drones > 0) {
-        std::cout << "INFO: Initial positions count mismatch or load error. Generating default positions." << std::endl;
+    if (config.initial_positions.size() != (size_t)config.num_drones) {
+        std::cout << "INFO: Initial positions count mismatch or load error. Generating default staggered positions." << std::endl;
         config.initial_positions.clear();
         for(int i = 0; i < config.num_drones; ++i) {
-            config.initial_positions.push_back({static_cast<double>(i) * 2.0 - (static_cast<double>(config.num_drones - 1) * 1.0), 0.0});
+            double x_pos = static_cast<double>(i) * 2.0 - (static_cast<double>(config.num_drones - 1) * 1.0);
+            config.initial_positions.push_back({x_pos, 0.0});
         }
     }
 
@@ -187,17 +182,8 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
         config.phases.clear();
         for (const auto& phase_node : node["phases"]) {
             PhaseConfig pc;
-            if (phase_node["center"] && phase_node["center"].IsSequence() && phase_node["center"].size() == 2) {
-                pc.center = phase_node["center"].as<std::vector<double>>();
-            } else {
-                 std::cerr << "Warning: Phase 'center' malformed. Using [0,0]." << std::endl;
-                 pc.center = {0.0, 0.0};
-            }
-            if (phase_node["start_time"]) {
-                pc.start_time = phase_node["start_time"].as<double>();
-            } else {
-                pc.start_time = 0.0;
-            }
+            pc.center = phase_node["center"].as<std::vector<double>>(std::vector<double>{0.0, 0.0});
+            pc.start_time = phase_node["start_time"].as<double>(0.0);
             config.phases.push_back(pc);
         }
     }
@@ -206,22 +192,16 @@ void ConfigReader::loadScenarioSettings(const YAML::Node& node, SimulationConfig
         config.wind_phases.clear();
         for (const auto& wp_node : node["wind"]["phases"]) {
             WindPhaseConfig wpc;
-            if (wp_node["phase"]) wpc.phase_number = wp_node["phase"].as<int>();
+            wpc.phase_number = wp_node["phase"].as<int>(0);
             
             if (wp_node["time_windows"] && wp_node["time_windows"].IsSequence()) {
                 for (const auto& tw_node : wp_node["time_windows"]) {
                     TimeWindow tw;
-                    if (tw_node["start_time"]) tw.start_time = tw_node["start_time"].as<double>(); else tw.start_time = 0.0;
-                    if (tw_node["end_time"]) tw.end_time = tw_node["end_time"].as<double>(); else tw.end_time = 0.0;
-                    
-                    if (tw_node["force"] && tw_node["force"].IsSequence() && tw_node["force"].size() == 2) {
-                        tw.force = tw_node["force"].as<std::vector<double>>();
-                    } else {
-                         std::cerr << "Warning: Wind time_window 'force' malformed or missing. Using [0,0]." << std::endl;
-                        tw.force = {0.0, 0.0};
-                    }
-                    if (tw_node["is_sine_wave"]) tw.is_sine_wave = tw_node["is_sine_wave"].as<bool>(false);
-                    if (tw_node["sine_frequency_rad_s"]) tw.sine_frequency_rad_s = tw_node["sine_frequency_rad_s"].as<double>(1.0);
+                    tw.start_time = tw_node["start_time"].as<double>(0.0);
+                    tw.end_time = tw_node["end_time"].as<double>(0.0);
+                    tw.force = tw_node["force"].as<std::vector<double>>(std::vector<double>{0.0, 0.0});
+                    tw.is_sine_wave = tw_node["is_sine_wave"].as<bool>(false);
+                    tw.sine_frequency_rad_s = tw_node["sine_frequency_rad_s"].as<double>(1.0);
                     wpc.time_windows.push_back(tw);
                 }
             }
@@ -235,16 +215,16 @@ void ConfigReader::loadOutputSettings(const YAML::Node& node, SimulationConfig& 
         std::cerr << "Warning: 'output_settings' node is not a map. Skipping." << std::endl;
         return;
     }
-    if (node["output_directory"]) config.output_directory = node["output_directory"].as<std::string>(config.output_directory);
-    if (node["csv_enabled"]) config.csv_enabled = node["csv_enabled"].as<bool>(config.csv_enabled);
-    if (node["csv_prefix"]) config.csv_prefix = node["csv_prefix"].as<std::string>(config.csv_prefix);
-    if (node["metrics_enabled"]) config.metrics_enabled = node["metrics_enabled"].as<bool>(config.metrics_enabled);
-    if (node["metrics_prefix"]) config.metrics_prefix = node["metrics_prefix"].as<std::string>(config.metrics_prefix);
+    config.output_directory = node["output_directory"].as<std::string>(config.output_directory);
+    config.csv_enabled = node["csv_enabled"].as<bool>(config.csv_enabled);
+    config.csv_prefix = node["csv_prefix"].as<std::string>(config.csv_prefix);
+    config.metrics_enabled = node["metrics_enabled"].as<bool>(config.metrics_enabled);
+    config.metrics_prefix = node["metrics_prefix"].as<std::string>(config.metrics_prefix);
 
     if (node["console_output"]) {
-        YAML::Node co_node = node["console_output"];
-        if (co_node["enabled"]) config.console_output_enabled = co_node["enabled"].as<bool>(config.console_output_enabled);
-        if (co_node["update_interval"]) config.console_update_interval = co_node["update_interval"].as<double>(config.console_update_interval);
+        const YAML::Node& co_node = node["console_output"];
+        config.console_output_enabled = co_node["enabled"].as<bool>(config.console_output_enabled);
+        config.console_update_interval = co_node["update_interval"].as<double>(config.console_update_interval);
     }
 }
 

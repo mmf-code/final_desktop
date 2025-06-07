@@ -11,7 +11,7 @@ simulation_settings:
     kp_test_value: 2.5           # The Kp to use for the manual test
     
     # --- Automated Ku/Pu Search Parameters ---
-    enable_auto_search: true     # MASTER SWITCH for the auto-tuner
+    enable_auto_search: false     # MASTER SWITCH for the auto-tuner
     auto_search_kp_start: 0.5
     auto_search_kp_step: 0.25
     auto_search_kp_max: 8.0
@@ -19,6 +19,19 @@ simulation_settings:
 
 # Note: The 'auto_kp_tuning' section has been removed as its functionality is
 # now fully covered by the 'ziegler_nichols_tuning' auto-search feature.
+
+# --- NEW: Output Settings ---
+# Enable or disable writing CSV data files.
+csv_enabled: true
+# Enable or disable writing the metrics summary .txt file.
+metrics_enabled: true
+# Directory where all output files will be saved.
+output_directory: "output"
+# Prefix for the data CSV filename.
+csv_prefix: "sim_data"
+# Prefix for the metrics report TXT filename.
+metrics_prefix: "metrics_report"
+
 
 controller_settings:
   pid: 
@@ -28,11 +41,11 @@ controller_settings:
     output_min: -10.0
     output_max: 10.0
   fls:
-    enable: false # Enable/disable fuzzy logic controller
+    enable: true # Enable/disable fuzzy logic controller
     params_file: "fuzzy_params.yaml"
 
 scenario_settings:
-  enable_wind: false  # Enable/disable wind effects
+  enable_wind: true  # Enable/disable wind effects
   formation_side_length: 4.0
   formation: 
     initial_positions: # Drone names must be drone_0, drone_1, ... for current loader logic

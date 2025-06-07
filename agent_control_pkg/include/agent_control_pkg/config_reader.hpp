@@ -54,7 +54,7 @@ struct ZNTuningParams {
     double auto_search_kp_max{10.0};
 };
 
-// Main simulation configuration structure
+// --- CORRECTED & MERGED: Main simulation configuration structure ---
 struct SimulationConfig {
     // Simulation Settings
     double dt{0.05};
