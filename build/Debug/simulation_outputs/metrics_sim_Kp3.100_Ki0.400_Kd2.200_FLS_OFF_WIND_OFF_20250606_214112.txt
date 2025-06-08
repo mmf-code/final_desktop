@@ -1,4 +1,0 @@
-Simulation Metrics for: multi_agent_sim_Kp3.100_Ki0.400_Kd2.200_FLS_OFF_WIND_OFF_20250606_214112
-PID Gains: Kp=3.1, Ki=0.4, Kd=2.2
-FLS: OFF, Wind: OFF
-=======================================================================

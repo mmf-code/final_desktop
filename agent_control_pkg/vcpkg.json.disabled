@@ -1,0 +1,9 @@
+{
+  "name": "agent-control-pkg",
+  "version": "1.0.0",
+  "builtin-baseline": "9c604254140797833b6f76908435c9fcbf09920e",
+  "dependencies": [
+    "yaml-cpp",
+    "gtest"
+  ]
+} 

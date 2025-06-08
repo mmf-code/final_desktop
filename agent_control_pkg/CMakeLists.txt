@@ -1,7 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Optionally use vcpkg toolchain if available
-if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+# Suppress deprecation warnings from third-party libraries (like yaml-cpp)
+if(POLICY CMP0048)
+    cmake_policy(SET CMP0048 NEW)
+endif()
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
+# Suppress cmake_minimum_required deprecation warnings from FetchContent dependencies
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecated warnings" FORCE)
+
+# Optionally use vcpkg toolchain if available and tests are enabled
+option(BUILD_TESTS "Build unit tests" ON)
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND BUILD_TESTS)
   if(DEFINED ENV{VCPKG_ROOT})
     set(_VCPKG_TOOLCHAIN "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
     if(EXISTS "${_VCPKG_TOOLCHAIN}")
@@ -31,13 +43,20 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-# Enable testing with CTest
-enable_testing()
-include(CTest)
-include(GoogleTest)
+# Enable testing with CTest (optional)
 
-# Find GTest package
-find_package(GTest CONFIG REQUIRED)
+if(BUILD_TESTS)
+    enable_testing()
+    include(CTest)
+    include(GoogleTest)
+    
+    # Find GTest package
+    find_package(GTest CONFIG QUIET)
+    if(NOT GTest_FOUND)
+        message(WARNING "GTest not found. Tests will be disabled. Install GTest via vcpkg or set BUILD_TESTS=OFF")
+        set(BUILD_TESTS OFF CACHE BOOL "Build unit tests" FORCE)
+    endif()
+endif()
 
 # Find yaml-cpp package
 set(YAML_CPP_REQUIRED_VERSION "0.6.0")
@@ -104,35 +123,41 @@ target_include_directories(fuzzy_logic_lib PUBLIC
 # Note: Obsolete executables removed (agent_control_main.cpp, fuzzy_test_main.cpp deleted)
 
 # --- Unit Tests ---
-add_executable(test_pid_controller
-    test/test_pid_controller.cpp
-)
-target_include_directories(test_pid_controller PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(test_pid_controller PRIVATE
-    pid_logic_lib
-    GTest::gtest
-    GTest::gtest_main
-)
+if(BUILD_TESTS AND GTest_FOUND)
+    add_executable(test_pid_controller
+        test/test_pid_controller.cpp
+    )
+    target_include_directories(test_pid_controller PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_pid_controller PRIVATE
+        pid_logic_lib
+        GTest::gtest
+        GTest::gtest_main
+    )
 
-# Discover tests automatically
-gtest_discover_tests(test_pid_controller)
+    # Discover tests automatically
+    gtest_discover_tests(test_pid_controller)
 
-# --- FLS Unit Tests ---
-add_executable(test_gt2_fls
-    test/test_gt2_fls.cpp
-)
-target_include_directories(test_gt2_fls PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(test_gt2_fls PRIVATE
-    fuzzy_logic_lib
-    GTest::gtest
-    GTest::gtest_main
-)
+    # --- FLS Unit Tests ---
+    add_executable(test_gt2_fls
+        test/test_gt2_fls.cpp
+    )
+    target_include_directories(test_gt2_fls PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_gt2_fls PRIVATE
+        fuzzy_logic_lib
+        GTest::gtest
+        GTest::gtest_main
+    )
 
-gtest_discover_tests(test_gt2_fls)
+    gtest_discover_tests(test_gt2_fls)
+    
+    message(STATUS "Unit tests enabled and configured")
+else()
+    message(STATUS "Unit tests disabled (BUILD_TESTS=${BUILD_TESTS}, GTest_FOUND=${GTest_FOUND})")
+endif()
 
 # Optional: Install rules
 # install(TARGETS pid_standalone_tester fuzzy_standalone_tester DESTINATION bin)

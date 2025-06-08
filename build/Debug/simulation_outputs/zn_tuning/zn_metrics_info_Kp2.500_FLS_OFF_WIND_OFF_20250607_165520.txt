@@ -1,6 +1,0 @@
-Ziegler-Nichols Tuning Run Information
-Timestamp: 20250607_165520
-Kp_test_value: 2.5
-Simulation Duration: 15s
-CSV Data File: zn_test_Kp2.500_FLS_OFF_WIND_OFF_20250607_165520.csv
-Objective: Observe Drone 0 X-axis for sustained oscillations after first setpoint change.

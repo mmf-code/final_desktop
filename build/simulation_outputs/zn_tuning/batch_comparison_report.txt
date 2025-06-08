@@ -1,9 +1,0 @@
-Batch ZN Tuning Comparison Report
-=================================
-
-Scenario: PID_ONLY
-  No oscillation detected
-
-Scenario: PID_WITH_WIND
-  No oscillation detected
-

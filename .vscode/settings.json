@@ -3,9 +3,11 @@
     "cmake.sourceDirectory": "${workspaceFolder}/agent_control_pkg",
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureSettings": {
-        "CMAKE_TOOLCHAIN_FILE": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "BUILD_TESTS": "OFF"
     },
+    "cmake.generator": "Visual Studio 17 2022",
+    "cmake.platform": "x64",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
     "C_Cpp.default.includePath": [
@@ -58,7 +60,7 @@
         "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": "docker-compose*.yml",
         "./schemas/ros-param-schema.json": [
             "**/config/*.yaml",
-            "**/params/*.yaml", 
+            "**/params/*.yaml",
             "**/launch/*.yaml"
         ]
     },
@@ -66,7 +68,7 @@
     // Enhanced file associations for ROS, C++, and Python
     "files.associations": {
         "*.launch": "xml",
-        "*.urdf": "xml", 
+        "*.urdf": "xml",
         "*.xacro": "xml",
         "*.sdf": "xml",
         "*.world": "xml",
@@ -105,7 +107,7 @@
     // Cursor and editor enhancements
     "editor.formatOnSave": false,
     "editor.codeActionsOnSave": {
-        "source.organizeImports": false,
+        "source.organizeImports": "never",
         "source.fixAll": "explicit"
     },
 
@@ -137,4 +139,4 @@
         "--compile-commands-dir=${workspaceFolder}",
         "--query-driver=C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x64/cl.exe"
     ]
-} 
+}
