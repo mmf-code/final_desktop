@@ -7,10 +7,10 @@ param(
     [switch]$Help
 )
 
-# Configuration file path
+# Configuration file path (updated for new structure)
 $ConfigPath = "C:\Users\ataka\OneDrive\Masaüstü\config\simulation_params.yaml"
-$ExePath = ".\build\Release\multi_drone_pid_tester.exe"
-$OutputDir = "systematic_test_results"
+$ExePath = "..\build\Release\multi_drone_pid_tester.exe"
+$OutputDir = "..\results\simulation_outputs"
 
 # Test configurations
 $TestConfigs = @{
@@ -167,7 +167,7 @@ function Run-SingleTest {
             }
             
             # Copy recent output files
-            $outputPath = "simulation_outputs"
+            $outputPath = "..\simulation_outputs"
             if (Test-Path $outputPath) {
                 $cutoffTime = (Get-Date).AddMinutes(-3)
                 

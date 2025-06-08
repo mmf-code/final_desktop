@@ -69,7 +69,6 @@ endif()
 # --- Config Reader Library ---
 add_library(config_reader_lib
     src/config_reader.cpp
-    # src/fuzzy_params_loader.cpp # This file is redundant, functionality is in config_reader.cpp
 )
 target_include_directories(config_reader_lib PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -102,24 +101,7 @@ target_include_directories(fuzzy_logic_lib PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-# --- Executable for PID standalone test (NOW USES FLS) ---
-add_executable(pid_standalone_tester
-    src/agent_control_main.cpp
-)
-target_include_directories(pid_standalone_tester PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(pid_standalone_tester PRIVATE
-    pid_logic_lib
-    fuzzy_logic_lib
-    config_reader_lib
-)
-
-# --- Executable for Fuzzy Logic standalone test ---
-add_executable(fuzzy_standalone_tester
-    src/fuzzy_test_main.cpp
-)
-target_link_libraries(fuzzy_standalone_tester PRIVATE fuzzy_logic_lib)
+# Note: Obsolete executables removed (agent_control_main.cpp, fuzzy_test_main.cpp deleted)
 
 # --- Unit Tests ---
 add_executable(test_pid_controller
@@ -154,22 +136,13 @@ gtest_discover_tests(test_gt2_fls)
 
 # Optional: Install rules
 # install(TARGETS pid_standalone_tester fuzzy_standalone_tester DESTINATION bin)
-# install(TARGETS pid_logic_lib fuzzy_logic_lib
+# install(TARGETS pid_logic_lib fuzzy_logic_lib config_reader_lib
 #     ARCHIVE DESTINATION lib
 #     LIBRARY DESTINATION lib
 #     RUNTIME DESTINATION bin)
 # install(DIRECTORY include/ DESTINATION include)
 
-# --- Executable for Simple PID Tuning ---
-add_executable(simple_pid_tuner
-    src/simple_pid_tuning_main.cpp
-)
-target_include_directories(simple_pid_tuner PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(simple_pid_tuner PRIVATE
-    pid_logic_lib  # Link against your PID library
-)
+# Note: Simple PID tuner removed (simple_pid_tuning_main.cpp deleted)
 
 # --- Executable for Multi-Drone PID Test ---
 add_executable(multi_drone_pid_tester
@@ -184,9 +157,7 @@ target_link_libraries(multi_drone_pid_tester PRIVATE
     config_reader_lib  # Link against config reader library
 )
 
-# --- Modular PID System ---
-# Add the modular PID system subdirectory
-add_subdirectory(src/modular_pid_system)
+# Note: Modular PID system removed (obsolete directory deleted)
 
 # The execute_process command to copy compile_commands.json has been removed.
 # It was failing due to special characters in your file path.

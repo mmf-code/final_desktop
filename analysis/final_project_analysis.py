@@ -18,12 +18,13 @@ plt.rcParams['font.size'] = 10
 
 
 class FormationControlAnalyzer:
-    def __init__(self, base_path="agent_control_pkg/simulation_outputs"):
+    def __init__(self, base_path="../simulation_outputs"):
         self.base_path = Path(base_path)
-        self.output_path = Path("final_project_results")
-        self.plots_path = self.output_path / "plots"
+        self.output_path = Path("../results/final_project_results")
+        self.plots_path = Path("../results/figures/analysis_plots")
 
         # Create output directories
+        self.output_path.mkdir(parents=True, exist_ok=True)
         self.plots_path.mkdir(parents=True, exist_ok=True)
 
         # Load data

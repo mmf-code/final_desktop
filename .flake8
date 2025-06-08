@@ -1,0 +1,63 @@
+[flake8]
+# Configuration for Multi-Agent Formation Control Project
+# More lenient rules for academic/research code
+
+# Set maximum line length to 88 characters (Black-compatible)
+max-line-length = 88
+
+# Ignore specific error codes that are too strict for research code
+ignore = 
+    # E501: Line too long (handled by max-line-length)
+    E501,
+    # E127: Continuation line over-indented for visual indent
+    E127,
+    # E128: Continuation line under-indented for visual indent
+    E128,
+    # W503: Line break before binary operator (conflicts with Black)
+    W503,
+    # W504: Line break after binary operator (acceptable style)
+    W504,
+    # E203: Whitespace before ':' (conflicts with Black)
+    E203,
+    # W291: Trailing whitespace (auto-fixed by formatters)
+    W291,
+    # W292: No newline at end of file (auto-fixed)
+    W292,
+    # E731: Do not assign a lambda expression (acceptable for short callbacks)
+    E731,
+    # F401: Module imported but unused (common in research scripts)
+    F401,
+    # F811: Redefinition of unused variable (acceptable in research)
+    F811
+
+# Allow longer function/class complexity for research code
+max-complexity = 15
+
+# Exclude directories from linting
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    build-ninja,
+    .cache,
+    vcpkg_installed,
+    .venv,
+    venv,
+    env,
+    docs
+
+# Allow longer names for scientific variables
+max-identifier-length = 60
+
+# Per-file ignores for specific cases
+per-file-ignores =
+    # Test files can be more lenient
+    test_*.py:E501,F401,F811,E127,W504
+    # Analysis scripts can have longer lines and relaxed formatting
+    analysis/*.py:E501,E127,W504,W291,W292
+    # Configuration files can have long lines
+    **/config*.py:E501,E127
+    # PowerShell interaction scripts need flexibility
+    systematic_testing.py:E501,E127,W504,W291,W292
+    # Main simulation scripts
+    **/main*.py:E501,E127,W504 

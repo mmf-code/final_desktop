@@ -2,7 +2,7 @@
 Write-Host "Starting systematic tests..." -ForegroundColor Green
 
 $ConfigFile = "C:\Users\ataka\OneDrive\Masaüstü\config\simulation_params.yaml"
-$Executable = ".\build\Release\multi_drone_pid_tester.exe"
+$Executable = "..\build\Release\multi_drone_pid_tester.exe"
 
 # Check if files exist
 if (!(Test-Path $ConfigFile)) {
@@ -73,9 +73,9 @@ foreach ($config in $TestConfigs) {
         Write-Host "✅ $($config.Name) completed successfully" -ForegroundColor Green
         
         # Rename output files
-        if (Test-Path "simulation_outputs") {
+        if (Test-Path "..\simulation_outputs") {
             $timestamp = Get-Date -Format "HHmmss"
-            Get-ChildItem "simulation_outputs\*.csv" | Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-1) } | ForEach-Object {
+            Get-ChildItem "..\simulation_outputs\*.csv" | Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-1) } | ForEach-Object {
                 $newName = "$($config.Name)_$($timestamp)_$($_.Name)"
                 Rename-Item $_.FullName $newName -ErrorAction SilentlyContinue
             }
@@ -89,5 +89,5 @@ foreach ($config in $TestConfigs) {
 }
 
 Write-Host "`n🎉 All tests completed!" -ForegroundColor Green
-Write-Host "Check simulation_outputs folder for results" -ForegroundColor Yellow
-Write-Host "Run 'python analyze_test_results.py' to analyze results" -ForegroundColor Cyan 
+Write-Host "Check ..\simulation_outputs folder for results" -ForegroundColor Yellow
+Write-Host "Run 'python ..\analysis\analyze_test_results.py' to analyze results" -ForegroundColor Cyan 

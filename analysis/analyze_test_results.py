@@ -17,7 +17,7 @@ class TestResultsAnalyzer:
         self.results = {}
         self.metrics_summary = {}
 
-    def load_test_results(self, base_dir="simulation_outputs"):
+    def load_test_results(self, base_dir="../simulation_outputs"):
         """Load all test result CSV files"""
         print("🔍 Loading test results...")
 
@@ -137,7 +137,8 @@ class TestResultsAnalyzer:
         """Generate detailed comparison report"""
         print("\n📋 Generating comparison report...")
 
-        report_path = "systematic_test_comparison.txt"
+        # Save to results/reports directory
+        report_path = "../results/reports/systematic_test_comparison.txt"
 
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("SYSTEMATIC TESTING COMPARISON REPORT\n")
@@ -302,11 +303,14 @@ class TestResultsAnalyzer:
         axes[1, 1].tick_params(axis='x', rotation=45)
 
         plt.tight_layout()
-        plt.savefig('systematic_test_comparison.png',
-                    dpi=300, bbox_inches='tight')
+        
+        # Save to results/figures/analysis_plots directory
+        plot_path = ('../results/figures/analysis_plots/'
+                     'systematic_test_comparison.png')
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         plt.show()
 
-        print("✅ Comparison plot saved as: systematic_test_comparison.png")
+        print(f"✅ Comparison plot saved as: {plot_path}")
 
     def run_full_analysis(self):
         """Run complete analysis pipeline"""
@@ -321,7 +325,8 @@ class TestResultsAnalyzer:
 
         print("\n🎉 Analysis Complete!")
         print(f"📋 Report: {report_path}")
-        print("📊 Plot: systematic_test_comparison.png")
+        print("📊 Plot: ../results/figures/analysis_plots/"
+              "systematic_test_comparison.png")
         print("\nKey insights available in the generated report.")
 
         return True

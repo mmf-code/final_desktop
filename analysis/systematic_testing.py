@@ -15,15 +15,15 @@ class SystematicTester:
     """Systematic tester for multi-agent formation control system."""
 
     def __init__(self):
-        self.base_config_path = "agent_control_pkg/config/simulation_params.yaml"
+        self.base_config_path = (
+            "../agent_control_pkg/config/simulation_params.yaml"
+        )
         self.external_config_path = (
             "C:/Users/ataka/OneDrive/Masaüstü/config/"
             "simulation_params.yaml"
         )
-        self.executable_path = (
-            "./build/Release/multi_drone_pid_tester.exe"
-        )
-        self.results_dir = "systematic_test_results"
+        self.executable_path = "../build/Release/multi_drone_pid_tester.exe"
+        self.results_dir = "../results/simulation_outputs"
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # Create results directory
@@ -38,7 +38,8 @@ class SystematicTester:
         for ($i = 0; $i -lt $keys.Length - 1; $i++) {{
             $current = $current[$keys[$i]]
         }}
-        $current[$keys[-1]] = {str(value).lower() if isinstance(value, bool) else value}
+        $current[$keys[-1]] = {(str(value).lower()
+                               if isinstance(value, bool) else value)}
         $config | ConvertTo-Yaml | Set-Content "{config_path}"
         """
         subprocess.run(["powershell", "-Command", ps_command], check=False)
@@ -56,16 +57,19 @@ class SystematicTester:
                     f'$flsLine = $config | Select-String -Pattern "enable:" | '
                     f'Select-Object -Index 1; if ($flsLine) {{ '
                     f'$lineNum = $flsLine.LineNumber - 1; '
-                    f'$config[$lineNum] = "    enable: {str(value).lower()}"; '
+                    f'$config[$lineNum] = "    enable: '
+                    f'{str(value).lower()}"; '
                     f'$config | Set-Content "{self.external_config_path}" }}'
                 )
             elif key_path == "scenario_settings.enable_wind":
                 ps_cmd = (
                     f'$config = Get-Content "{self.external_config_path}"; '
                     f'$windLine = $config | Select-String -Pattern '
-                    f'"enable_wind:" | Select-Object -First 1; if ($windLine) {{ '
+                    f'"enable_wind:" | Select-Object -First 1; '
+                    f'if ($windLine) {{ '
                     f'$lineNum = $windLine.LineNumber - 1; '
-                    f'$config[$lineNum] = "  enable_wind: {str(value).lower()}"; '
+                    f'$config[$lineNum] = "  enable_wind: '
+                    f'{str(value).lower()}"; '
                     f'$config | Set-Content "{self.external_config_path}" }}'
                 )
             elif key_path == "controller_settings.pid.enable_feedforward":
@@ -78,7 +82,8 @@ class SystematicTester:
                     f'{str(value).lower()}"; '
                     f'$config | Set-Content "{self.external_config_path}" }}'
                 )
-            elif key_path == "controller_settings.pid.enable_derivative_filter":
+            elif key_path == ("controller_settings.pid."
+                              "enable_derivative_filter"):
                 ps_cmd = (
                     f'$config = Get-Content "{self.external_config_path}"; '
                     f'$dfLine = $config | Select-String -Pattern '
@@ -101,31 +106,32 @@ class SystematicTester:
         # Run the test
         try:
             result = subprocess.run([self.executable_path],
-                                    capture_output=True, text=True, timeout=180,
-                                    check=False)
+                                    capture_output=True, text=True,
+                                    timeout=180, check=False)
 
             if result.returncode == 0:
-                print("✅ Test completed successfully")
+                print("Test completed successfully")
                 self.organize_results(test_name)
                 return True
             else:
-                print(f"❌ Test failed with return code: {result.returncode}")
+                print(f"Test failed with return code: {result.returncode}")
                 return False
 
         except subprocess.TimeoutExpired:
-            print("⏰ Test timed out after 3 minutes")
+            print("Test timed out after 3 minutes")
             return False
         except Exception as e:
-            print(f"💥 Test failed with exception: {e}")
+            print(f"Test failed with exception: {e}")
             return False
 
     def organize_results(self, test_name):
         """Organize test results into structured directories"""
-        test_dir = Path(self.results_dir) / f"{self.timestamp}_{test_name}"
+        test_dir = (Path(self.results_dir) /
+                    f"{self.timestamp}_{test_name}")
         test_dir.mkdir(exist_ok=True)
 
-        # Move CSV and metrics files
-        output_dir = Path("simulation_outputs")
+        # Move CSV and metrics files from simulation_outputs
+        output_dir = Path("../simulation_outputs")
         if output_dir.exists():
             for file in output_dir.glob("*.csv"):
                 # Modified in last 3 minutes
@@ -137,7 +143,7 @@ class SystematicTester:
                 if file.stat().st_mtime > time.time() - 180:
                     shutil.copy2(file, test_dir / f"{test_name}_{file.name}")
 
-        print(f"📁 Results saved to: {test_dir}")
+        print(f"Results saved to: {test_dir}")
 
     def run_feature_comparison_suite(self):
         """Run systematic feature comparison tests"""
@@ -201,14 +207,14 @@ class SystematicTester:
             }
         ]
 
-        print(f"🚀 Starting Feature Comparison Suite "
+        print(f"Starting Feature Comparison Suite "
               f"({len(test_scenarios)} tests)")
-        print(f"📅 Timestamp: {self.timestamp}")
+        print(f"Timestamp: {self.timestamp}")
         print("=" * 60)
 
         test_results = {}
         for i, scenario in enumerate(test_scenarios, 1):
-            print(f"\n📊 Progress: {i}/{len(test_scenarios)}")
+            print(f"\nProgress: {i}/{len(test_scenarios)}")
             success = self.run_test(scenario["name"], scenario["config"])
             test_results[scenario["name"]] = success
             time.sleep(2)  # Brief pause between tests
@@ -243,7 +249,7 @@ class SystematicTester:
             }
 
             for test_name, success in test_results.items():
-                status = "✅ PASS" if success else "❌ FAIL"
+                status = "PASS" if success else "FAIL"
                 desc = descriptions.get(test_name, "Custom test")
                 f.write(f"| {test_name} | {status} | {desc} |\n")
 
@@ -270,13 +276,13 @@ class SystematicTester:
             f.write("3. Calculate improvement percentages\n")
             f.write("4. Document findings for final report\n")
 
-        print(f"\n📋 Comparison analysis generated: {report_path}")
+        print(f"\nComparison analysis generated: {report_path}")
 
 
 if __name__ == "__main__":
     tester = SystematicTester()
 
-    print("🎯 Multi-Agent Formation Control - Systematic Testing")
+    print("Multi-Agent Formation Control - Systematic Testing")
     print("=" * 55)
     print("This will run systematic tests to compare:")
     print("• Baseline PID vs FLS enhancement")
@@ -291,21 +297,23 @@ if __name__ == "__main__":
         confirm = input("Start systematic testing? (y/n): ").strip().lower()
 
         if confirm in ('y', 'yes'):
-            print("\n🚀 Starting systematic test suite...")
+            print("\nStarting systematic test suite...")
             results = tester.run_feature_comparison_suite()
 
             # Generate summary
             successful_tests = sum(results.values())
 
-            print("\n🎉 Testing Complete!")
-            print(f"✅ Successful: {successful_tests}/{TOTAL_TESTS}")
-            print(f"📁 Results saved in: {tester.results_dir}")
-            print("📊 Use the generated CSV files for detailed analysis")
+            print("\nTesting Complete!")
+            print(f"Successful: {successful_tests}/{TOTAL_TESTS}")
+            print(f"Results saved in: {tester.results_dir}")
+            print("Use generated CSV files for detailed analysis")
 
         else:
             print("Testing cancelled.")
 
     except KeyboardInterrupt:
-        print("\n⚠️ Testing interrupted by user")
+        print("\nTesting interrupted by user")
     except Exception as e:
-        print(f"\n💥 Testing failed: {e}") 
+        print(f"\nTesting failed: {e}")
+ 
+ 
