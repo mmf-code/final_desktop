@@ -6,13 +6,21 @@ simulation_settings:
     enable: false
     kp_test_value: 2.5
     enable_auto_search: false
-    auto_search_kp_start: 50.0
-    auto_search_kp_step: 2.0
-    auto_search_kp_max: 100.0
-    simulation_time: 15.0
-    quick_method_test: 'Off'
-    manual_ku: 120.0
-    manual_pu: 15.0
+    
+    # Expanded search range for improved systems
+    auto_search_kp_start: 10.0      # Start higher due to improved stability
+    auto_search_kp_step: 5.0        # Larger steps for faster search
+    auto_search_kp_max: 200.0       # Much higher max due to anti-windup protection
+    simulation_time: 20.0           # Longer simulation for better analysis
+    
+    # Formation-specific ZN methods
+    formation_aware_tuning: true    # Use formation-specific criteria
+    formation_stability_margin: 1.5 # Safety factor for formation control
+    
+    # Quick method testing with proven values
+    quick_method_test: 'Off'        # Options: Classic, Conservative, LessOvershoot, NoOvershoot, Aggressive, ModernZN, FormationOptimal
+    manual_ku: 150.0                # Updated based on improved system stability
+    manual_pu: 12.0                 # Adjusted for realistic oscillation period
 csv_enabled: true
 metrics_enabled: true
 output_directory: output
@@ -23,8 +31,25 @@ controller_settings:
     kp: 3.1
     ki: 0.4
     kd: 2.2
-    output_min: -10.0
+    
+    # Axis-specific output limits (m/s²)
+    output_min_x: -10.0    # X-axis acceleration limits
+    output_max_x: 10.0
+    output_min_y: -8.0     # Y-axis often different due to gravity compensation
+    output_max_y: 12.0
+    
+    # Backward compatibility
+    output_min: -10.0      # Fallback for single-axis systems
     output_max: 10.0
+    
+    # Derivative filtering (reduces noise in D-term)
+    enable_derivative_filter: true
+    derivative_filter_alpha: 0.1    # Low-pass filter coefficient (0.05-0.2 typical)
+    
+    # Feed-forward control (improves tracking performance)
+    enable_feedforward: true       # Testing feed-forward improvements
+    velocity_feedforward_gain: 0.8  # Velocity feed-forward coefficient
+    acceleration_feedforward_gain: 0.1  # Acceleration feed-forward coefficient
   fls:
     enable: true
     params_file: fuzzy_params.yaml

@@ -924,12 +924,28 @@ int main() {
       NUM_DRONES);
 
   for (int i = 0; i < NUM_DRONES; ++i) {
+    // Create PID controllers with axis-specific limits and enhanced features
     pid_x_controllers.emplace_back(
-        kp_actual, ki_actual, kd_actual, config.pid_params.output_min,
-        config.pid_params.output_max, drones[i].position_x);
+        kp_actual, ki_actual, kd_actual, 
+        config.pid_params.output_min_x, config.pid_params.output_max_x, 
+        drones[i].position_x, 
+        config.pid_params.enable_derivative_filter, config.pid_params.derivative_filter_alpha);
     pid_y_controllers.emplace_back(
-        kp_actual, ki_actual, kd_actual, config.pid_params.output_min,
-        config.pid_params.output_max, drones[i].position_y);
+        kp_actual, ki_actual, kd_actual, 
+        config.pid_params.output_min_y, config.pid_params.output_max_y, 
+        drones[i].position_y,
+        config.pid_params.enable_derivative_filter, config.pid_params.derivative_filter_alpha);
+    
+    // Enable feed-forward control if configured
+    if (config.pid_params.enable_feedforward) {
+      pid_x_controllers[i].enableFeedForward(true, 
+        config.pid_params.velocity_feedforward_gain, 
+        config.pid_params.acceleration_feedforward_gain);
+      pid_y_controllers[i].enableFeedForward(true, 
+        config.pid_params.velocity_feedforward_gain, 
+        config.pid_params.acceleration_feedforward_gain);
+    }
+    
     if (USE_FLS_ACTUAL) {
       applyFuzzyParamsLocal(fls_x_controllers_vec[i], fls_yaml_params_local);
       applyFuzzyParamsLocal(fls_y_controllers_vec[i], fls_yaml_params_local);

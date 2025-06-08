@@ -6,7 +6,8 @@
 namespace agent_control_pkg
 {
 
-PIDController::PIDController(double kp, double ki, double kd, double output_min, double output_max, double setpoint)
+PIDController::PIDController(double kp, double ki, double kd, double output_min, double output_max, 
+                             double setpoint, bool enable_derivative_filter, double derivative_filter_alpha)
 : kp_(kp),
   ki_(ki),
   kd_(kd),
@@ -19,7 +20,13 @@ PIDController::PIDController(double kp, double ki, double kd, double output_min,
   last_terms_{0.0, 0.0, 0.0, 0.0},
   previous_measurement_(0.0), // Initialize previous_measurement_
   output_saturated_(false),
-  last_output_before_clamp_(0.0)
+  last_output_before_clamp_(0.0),
+  feedforward_enabled_(false),
+  velocity_feedforward_gain_(0.8),
+  acceleration_feedforward_gain_(0.1),
+  derivative_filter_enabled_(enable_derivative_filter),
+  derivative_filter_alpha_(derivative_filter_alpha),
+  filtered_derivative_(0.0)
 {
   if (output_min_ >= output_max_) {
     // Consider throwing an exception or logging an error for invalid limits
@@ -101,7 +108,7 @@ PIDController::PIDTerms PIDController::calculate_with_terms(double current_value
   }
 
 
-  // Derivative Term (on Measurement)
+  // Derivative Term (on Measurement) with optional filtering
   double derivative_input_change = 0.0;
   if (first_calculation_) {
     // On the first call, there's no previous_measurement_ to calculate a derivative.
@@ -113,12 +120,19 @@ PIDController::PIDTerms PIDController::calculate_with_terms(double current_value
   }
   previous_measurement_ = current_value; // Store current value for next iteration
 
-  // Derivative term is calculated as -Kd * (change_in_measurement / dt)
-  // or Kd * (change_in_error_if_setpoint_is_constant / dt)
-  // Since dError/dt = d(Setpoint - Measurement)/dt. If Setpoint is const, dError/dt = -dMeasurement/dt.
-  // So, Kd * dError/dt = Kd * (-dMeasurement/dt)
-  // The `derivative_input_change / dt` is dMeasurement/dt
-  double d_term = -kd_ * (derivative_input_change / dt);
+  // Calculate raw derivative
+  double raw_derivative = derivative_input_change / dt;
+  
+  // Apply derivative filtering if enabled (low-pass filter to reduce noise)
+  if (derivative_filter_enabled_) {
+    filtered_derivative_ = derivative_filter_alpha_ * raw_derivative + 
+                          (1.0 - derivative_filter_alpha_) * filtered_derivative_;
+  } else {
+    filtered_derivative_ = raw_derivative;
+  }
+
+  // Derivative term is calculated as -Kd * (filtered_change_in_measurement / dt)
+  double d_term = -kd_ * filtered_derivative_;
 
 
   // Store previous_error_ - still useful if your FLS or other logic needs the raw error derivative.
@@ -153,6 +167,25 @@ double PIDController::calculate(double current_value, double dt)
   return calculate_with_terms(current_value, dt).total_output;
 }
 
+double PIDController::calculateWithFeedForward(double current_value, double dt, double setpoint_velocity, double setpoint_acceleration)
+{
+  // Get base PID calculation
+  PIDTerms base_terms = calculate_with_terms(current_value, dt);
+  
+  // Add feed-forward control if enabled
+  double feedforward_output = 0.0;
+  if (feedforward_enabled_) {
+    feedforward_output = velocity_feedforward_gain_ * setpoint_velocity + 
+                        acceleration_feedforward_gain_ * setpoint_acceleration;
+  }
+  
+  // Combine PID output with feed-forward and apply limits
+  double enhanced_output = base_terms.total_output + feedforward_output;
+  enhanced_output = std::clamp(enhanced_output, output_min_, output_max_);
+  
+  return enhanced_output;
+}
+
 PIDController::PIDTerms PIDController::getLastTerms() const
 {
   return last_terms_;
@@ -171,6 +204,7 @@ void PIDController::reset()
   last_terms_ = {0.0, 0.0, 0.0, 0.0};
   output_saturated_ = false;
   last_output_before_clamp_ = 0.0;
+  filtered_derivative_ = 0.0;
 }
 
 double PIDController::getIntegralValue() const
@@ -181,6 +215,32 @@ double PIDController::getIntegralValue() const
 bool PIDController::isOutputSaturated() const
 {
   return output_saturated_;
+}
+
+void PIDController::enableFeedForward(bool enable, double velocity_gain, double acceleration_gain)
+{
+  feedforward_enabled_ = enable;
+  velocity_feedforward_gain_ = velocity_gain;
+  acceleration_feedforward_gain_ = acceleration_gain;
+}
+
+void PIDController::setFeedForwardGains(double velocity_gain, double acceleration_gain)
+{
+  velocity_feedforward_gain_ = velocity_gain;
+  acceleration_feedforward_gain_ = acceleration_gain;
+}
+
+void PIDController::enableDerivativeFilter(bool enable, double alpha)
+{
+  derivative_filter_enabled_ = enable;
+  derivative_filter_alpha_ = alpha;
+}
+
+void PIDController::setDerivativeFilterAlpha(double alpha)
+{
+  if (alpha > 0.0 && alpha <= 1.0) {
+    derivative_filter_alpha_ = alpha;
+  }
 }
 
 } // namespace agent_control_pkg

@@ -15,13 +15,22 @@ public:
         double total_output;
     };
 
-    // Constructor
-    PIDController(double kp, double ki, double kd, double output_min, double output_max, double setpoint = 0.0);
+    // Constructor with enhanced parameters
+    PIDController(double kp, double ki, double kd, double output_min, double output_max, 
+                  double setpoint = 0.0, bool enable_derivative_filter = true, double derivative_filter_alpha = 0.1);
 
     // Update gains, output limits, or target
     void setTunings(double kp, double ki, double kd);
     void setOutputLimits(double min, double max);
     void setSetpoint(double setpoint);
+    
+    // Feed-forward control methods
+    void enableFeedForward(bool enable, double velocity_gain = 0.8, double acceleration_gain = 0.1);
+    void setFeedForwardGains(double velocity_gain, double acceleration_gain);
+    
+    // Derivative filter control
+    void enableDerivativeFilter(bool enable, double alpha = 0.1);
+    void setDerivativeFilterAlpha(double alpha);
 
     // Access current PID settings
     double getKp() const;
@@ -32,8 +41,13 @@ public:
     // Basic PID computation (returns control output)
     double calculate(double current_value, double dt);
     
+    // Enhanced calculation with feed-forward
+    double calculateWithFeedForward(double current_value, double dt, double setpoint_velocity = 0.0, double setpoint_acceleration = 0.0);
+    
     // Version that also returns the breakdown of P/I/D
     PIDTerms calculate_with_terms(double current_value, double dt);
+    
+
 
     // Retrieve last computed PID components
     PIDTerms getLastTerms() const;
@@ -71,6 +85,16 @@ private:
     // Enhanced anti-windup tracking
     bool output_saturated_;
     double last_output_before_clamp_;
+    
+    // Feed-forward control parameters
+    bool feedforward_enabled_;
+    double velocity_feedforward_gain_;
+    double acceleration_feedforward_gain_;
+    
+    // Derivative filtering
+    bool derivative_filter_enabled_;
+    double derivative_filter_alpha_;
+    double filtered_derivative_;
 };
 
 }  // namespace agent_control_pkg

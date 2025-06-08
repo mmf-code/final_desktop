@@ -16,8 +16,25 @@ struct SimPIDParams {
     double kp{3.1}; 
     double ki{0.4};
     double kd{2.2};
-    double output_min{-10.0};
+    
+    // Configurable output limits per axis  
+    double output_min_x{-10.0};   // X-axis acceleration limits (m/s²)
+    double output_max_x{10.0};
+    double output_min_y{-8.0};    // Y-axis often has different limits due to gravity compensation
+    double output_max_y{12.0};
+    
+    // Backward compatibility
+    double output_min{-10.0};     // Fallback for single-axis systems
     double output_max{10.0};
+    
+    // Derivative filter settings
+    bool enable_derivative_filter{true};
+    double derivative_filter_alpha{0.1};  // Low-pass filter coefficient (0.05-0.2 typical)
+    
+    // Feed-forward control parameters
+    bool enable_feedforward{false};
+    double velocity_feedforward_gain{0.8};      // Velocity feed-forward coefficient
+    double acceleration_feedforward_gain{0.1};  // Acceleration feed-forward coefficient
 };
 
 // Structure for individual phase configuration
