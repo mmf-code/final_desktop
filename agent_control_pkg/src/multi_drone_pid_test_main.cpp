@@ -237,13 +237,47 @@ struct FakeDrone {
   double velocity_y = 0.0;
   double prev_error_x_fls = 0.0;
   double prev_error_y_fls = 0.0;
+  
+  // Realistic drone physical parameters
+  double mass = 1.5;              // kg - typical quadcopter mass
+  double drag_coefficient = 0.1;  // Air resistance coefficient
+  double max_acceleration = 15.0; // m/s² - realistic drone acceleration limit
+  double response_time_constant = 0.1; // seconds - simulates motor/ESC response delay
+  double commanded_accel_x = 0.0; // Commanded acceleration (for response delay)
+  double commanded_accel_y = 0.0;
 
   void update(double accel_cmd_x, double accel_cmd_y, double dt,
               double external_force_x = 0.0, double external_force_y = 0.0) {
-    velocity_x += (accel_cmd_x + external_force_x) * dt;
-    velocity_y += (accel_cmd_y + external_force_y) * dt;
-    velocity_x *= 0.98;
-    velocity_y *= 0.98;
+    // Clamp acceleration commands to realistic limits
+    accel_cmd_x = std::clamp(accel_cmd_x, -max_acceleration, max_acceleration);
+    accel_cmd_y = std::clamp(accel_cmd_y, -max_acceleration, max_acceleration);
+    
+    // Simulate motor/ESC response delay with first-order lag
+    double alpha = dt / (response_time_constant + dt);
+    commanded_accel_x += alpha * (accel_cmd_x - commanded_accel_x);
+    commanded_accel_y += alpha * (accel_cmd_y - commanded_accel_y);
+    
+    // Calculate drag forces (quadratic air resistance)
+    double speed = std::sqrt(velocity_x * velocity_x + velocity_y * velocity_y);
+    double drag_force_x = 0.0;
+    double drag_force_y = 0.0;
+    
+    if (speed > 1e-6) {
+      double drag_magnitude = drag_coefficient * speed * speed;
+      drag_force_x = -drag_magnitude * (velocity_x / speed) / mass;
+      drag_force_y = -drag_magnitude * (velocity_y / speed) / mass;
+    }
+    
+    // Apply forces: actual acceleration (after delay) + external forces + drag
+    velocity_x += (commanded_accel_x + external_force_x / mass + drag_force_x) * dt;
+    velocity_y += (commanded_accel_y + external_force_y / mass + drag_force_y) * dt;
+    
+    // Apply velocity limits (realistic drone max speed ~20 m/s)
+    double max_velocity = 20.0;
+    velocity_x = std::clamp(velocity_x, -max_velocity, max_velocity);
+    velocity_y = std::clamp(velocity_y, -max_velocity, max_velocity);
+    
+    // Update positions
     position_x += velocity_x * dt;
     position_y += velocity_y * dt;
   }
@@ -320,35 +354,38 @@ struct PerformanceMetrics {
 
     double current_error = std::abs(current_value - target_value_for_metrics);
 
-    // Check 2% settling band
+    // Check 2% settling band with improved hysteresis and stability requirement
     if (current_error <= settling_tolerance_2percent) {
       if (!in_settling_band) {
         time_entered_settling_band = time_now;
         in_settling_band = true;
       }
-      if (settling_time_2percent < 0.0) {
+      // Require stability for at least 0.5 seconds before declaring settled
+      if (settling_time_2percent < 0.0 && (time_now - time_entered_settling_band) >= 0.5) {
         settling_time_2percent = time_entered_settling_band;
       }
     } else {
-      // Don't reset immediately - allow brief excursions
-      if (in_settling_band && current_error > settling_tolerance_2percent * 2.0) {
+      // Use improved hysteresis: only reset if error exceeds 1.5x tolerance (not 2x)
+      if (in_settling_band && current_error > settling_tolerance_2percent * 1.5) {
         settling_time_2percent = -1.0;
         in_settling_band = false;
         time_entered_settling_band = -1.0;
       }
     }
 
-    // Check 5% settling band (more forgiving)
+    // Check 5% settling band with improved consistency and stability requirement
     if (current_error <= settling_tolerance_5percent) {
       if (!in_settling_band_5percent) {
         time_entered_settling_band_5percent = time_now;
         in_settling_band_5percent = true;
       }
-      if (settling_time_5percent < 0.0) {
+      // Require stability for at least 0.3 seconds (more lenient than 2% band)
+      if (settling_time_5percent < 0.0 && (time_now - time_entered_settling_band_5percent) >= 0.3) {
         settling_time_5percent = time_entered_settling_band_5percent;
       }
     } else {
-      if (in_settling_band_5percent && current_error > settling_tolerance_5percent * 2.0) {
+      // Consistent hysteresis: use 1.5x multiplier like 2% band
+      if (in_settling_band_5percent && current_error > settling_tolerance_5percent * 1.5) {
         settling_time_5percent = -1.0;
         in_settling_band_5percent = false;
         time_entered_settling_band_5percent = -1.0;

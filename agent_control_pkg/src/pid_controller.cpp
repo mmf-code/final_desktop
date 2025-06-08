@@ -17,7 +17,9 @@ PIDController::PIDController(double kp, double ki, double kd, double output_min,
   previous_error_(0.0), // Still useful if other parts of your system might want raw error
   first_calculation_(true),
   last_terms_{0.0, 0.0, 0.0, 0.0},
-  previous_measurement_(0.0) // Initialize previous_measurement_
+  previous_measurement_(0.0), // Initialize previous_measurement_
+  output_saturated_(false),
+  last_output_before_clamp_(0.0)
 {
   if (output_min_ >= output_max_) {
     // Consider throwing an exception or logging an error for invalid limits
@@ -76,14 +78,27 @@ PIDController::PIDTerms PIDController::calculate_with_terms(double current_value
   // Proportional Term
   double p_term = kp_ * error;
 
-  // Integral Term (with anti-windup consideration implicitly by clamping total output later)
-  // More explicit anti-windup can be added here if output saturation is frequent and problematic
-  // e.g., by only accumulating integral if output is not saturated or error has same sign as output.
+  // Integral Term with proper anti-windup protection
   integral_ += error * dt;
-  // Optional: Clamp integral term itself to prevent excessive windup
-  // double max_integral_contribution = (output_max_ - output_min_) / 2.0; // Heuristic
-  // integral_ = std::clamp(integral_, -max_integral_contribution / ki_if_ki_is_not_zero, max_integral_contribution / ki_if_ki_is_not_zero);
   double i_term = ki_ * integral_;
+  
+  // Calculate preliminary output to check for saturation
+  double preliminary_output = p_term + i_term + (-kd_ * (first_calculation_ ? 0.0 : (current_value - previous_measurement_) / dt));
+  
+  // If output would be saturated and error would increase saturation, don't accumulate integral
+  if ((preliminary_output > output_max_ && error > 0.0) || 
+      (preliminary_output < output_min_ && error < 0.0)) {
+    integral_ -= error * dt;  // Remove the integral accumulation
+    i_term = ki_ * integral_;   // Recalculate integral term
+  }
+  
+  // Also clamp integral term directly to prevent excessive buildup
+  if (std::abs(ki_) > 1e-9) {
+    double max_integral_contribution = std::max(std::abs(output_max_), std::abs(output_min_)) * 0.8;
+    double max_integral_value = max_integral_contribution / std::abs(ki_);
+    integral_ = std::clamp(integral_, -max_integral_value, max_integral_value);
+    i_term = ki_ * integral_;
+  }
 
 
   // Derivative Term (on Measurement)
@@ -114,16 +129,18 @@ PIDController::PIDTerms PIDController::calculate_with_terms(double current_value
 
   // Raw PID Output
   double output = p_term + i_term + d_term;
+  last_output_before_clamp_ = output;
 
-  // Clamp Output to defined limits (Anti-windup for integral term)
+  // Clamp Output to defined limits with enhanced anti-windup
   double clamped_output = std::clamp(output, output_min_, output_max_);
+  output_saturated_ = (output != clamped_output);
 
-  // Optional: Adjust integral based on clamping to further prevent windup
-  // If output was clamped, and error sign is such that integral would grow further into saturation, reset/reduce integral.
-  // This is more advanced anti-windup. For now, output clamping is the primary method.
-  // Example: if (output != clamped_output && std::signbit(error) == std::signbit(output - clamped_output)) {
-  //    integral_ -= (output - clamped_output) / ki_; // Back-calculate and remove excess integral
-  // }
+  // Enhanced anti-windup: If output was clamped, back-calculate integral to prevent further windup
+  if (output_saturated_ && std::abs(ki_) > 1e-9) {
+    double excess_output = output - clamped_output;
+    double integral_correction = excess_output / ki_;
+    integral_ -= integral_correction * 0.5;  // Partial correction to prevent oscillation
+  }
 
 
   // Store terms (using potentially unclamped P, I, D for analysis, but clamped total_output)
@@ -152,6 +169,18 @@ void PIDController::reset()
   first_calculation_ = true;
   // previous_measurement_ = 0.0; // Or get current value if possible at reset time
   last_terms_ = {0.0, 0.0, 0.0, 0.0};
+  output_saturated_ = false;
+  last_output_before_clamp_ = 0.0;
+}
+
+double PIDController::getIntegralValue() const
+{
+  return integral_;
+}
+
+bool PIDController::isOutputSaturated() const
+{
+  return output_saturated_;
 }
 
 } // namespace agent_control_pkg

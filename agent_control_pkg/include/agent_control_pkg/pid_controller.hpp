@@ -40,6 +40,10 @@ public:
 
     // Reset integrator and internal state
     void reset();
+    
+    // Enhanced diagnostic information
+    double getIntegralValue() const;
+    bool isOutputSaturated() const;
 
 private:
     // PID gains
@@ -63,6 +67,10 @@ private:
 
     // Last PID terms (for logging/debug/analysis)
     PIDTerms last_terms_;
+    
+    // Enhanced anti-windup tracking
+    bool output_saturated_;
+    double last_output_before_clamp_;
 };
 
 }  // namespace agent_control_pkg
