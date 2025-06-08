@@ -28,9 +28,9 @@ csv_prefix: sim_data
 metrics_prefix: metrics_report
 controller_settings:
   pid:
-    kp: 3.1
-    ki: 0.4
-    kd: 2.2
+    kp: 7.0
+    ki: 1.0
+    kd: 4.5
     
     # Axis-specific output limits (m/s²)
     output_min_x: -10.0    # X-axis acceleration limits
@@ -54,7 +54,7 @@ controller_settings:
     enable: true
     params_file: fuzzy_params.yaml
 scenario_settings:
-  enable_wind: false
+  enable_wind: true
   formation_side_length: 4.0
   formation:
     initial_positions:
