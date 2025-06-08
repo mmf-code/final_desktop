@@ -1,7 +1,7 @@
-prefix=C:/Program Files/agent_control_standalone_test
+prefix=C:/Program Files (x86)/agent_control_standalone_test
 exec_prefix=${prefix}
-includedir=C:/Program Files/agent_control_standalone_test/include
-libdir=C:/Program Files/agent_control_standalone_test/lib
+includedir=C:/Program Files (x86)/agent_control_standalone_test/include
+libdir=C:/Program Files (x86)/agent_control_standalone_test/lib
 
 Name: Yaml-cpp
 Description: A YAML parser and emitter for C++

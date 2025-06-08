@@ -48,6 +48,11 @@
     "python.analysis.diagnosticMode": "workspace",
     "python.defaultInterpreterPath": "python",
     "python.terminal.activateEnvironment": false,
+    "python.analysis.exclude": [
+        "**/build/**",
+        "**/build/_deps/**",
+        "**/_deps/**"
+    ],
 
     // YAML Language Support
     "yaml.validate": true,
@@ -103,6 +108,9 @@
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
     "files.trimFinalNewlines": true,
+    "files.exclude": {
+        "**/build/_deps/**": true
+    },
 
     // Cursor and editor enhancements
     "editor.formatOnSave": false,
@@ -117,6 +125,7 @@
     // Search and indexing optimization
     "search.exclude": {
         "**/build/**": true,
+        "**/build/_deps/**": true,
         "**/install/**": true,
         "**/log/**": true,
         "**/.venv/**": true,

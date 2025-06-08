@@ -242,6 +242,9 @@ CMAKE_TOOLCHAIN_FILE:FILEPATH=C:/Program Files (x86)/Microsoft Visual Studio/202
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//Disable deprecated warnings
+CMAKE_WARN_DEPRECATED:BOOL=OFF
+
 //Path to the coverage program that CTest uses for performing coverage
 // inspection
 COVERAGE_COMMAND:FILEPATH=COVERAGE_COMMAND-NOTFOUND

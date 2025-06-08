@@ -33,6 +33,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 project(agent_control_standalone_test CXX)
 
+# Suppress GNUInstallDirs warning from third-party dependencies
+set(CMAKE_WARN_ON_ABSOLUTE_INSTALL_DESTINATION OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

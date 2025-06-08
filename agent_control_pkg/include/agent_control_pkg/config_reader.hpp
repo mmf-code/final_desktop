@@ -7,7 +7,7 @@
 #include <stdexcept> // For std::runtime_error
 #include <map>    // For FuzzyParams
 #include <array>  // For FuzzyParams
-#include "yaml-cpp/yaml.h" // YAML library
+#include <yaml-cpp/yaml.h> // YAML library
 
 namespace agent_control_pkg {
 
