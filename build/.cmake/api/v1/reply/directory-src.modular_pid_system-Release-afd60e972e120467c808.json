@@ -1,0 +1,171 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"src/modular_pid_system/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 87,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/modular_drone_system.lib"
+			],
+			"targetId" : "modular_drone_system::@4c66c086d27eae88c24e",
+			"targetIndex" : 9,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "modular_drone_system::@4c66c086d27eae88c24e",
+				"index" : 9
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/zn_tuning.lib"
+			],
+			"targetId" : "zn_tuning::@4c66c086d27eae88c24e",
+			"targetIndex" : 19,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "zn_tuning::@4c66c086d27eae88c24e",
+				"index" : 19
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/pid_only_test.exe"
+			],
+			"targetId" : "pid_only_test::@4c66c086d27eae88c24e",
+			"targetIndex" : 12,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "pid_only_test::@4c66c086d27eae88c24e",
+				"index" : 12
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/pid_wind_test.exe"
+			],
+			"targetId" : "pid_wind_test::@4c66c086d27eae88c24e",
+			"targetIndex" : 15,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "pid_wind_test::@4c66c086d27eae88c24e",
+				"index" : 15
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/pid_wind_flc_test.exe"
+			],
+			"targetId" : "pid_wind_flc_test::@4c66c086d27eae88c24e",
+			"targetIndex" : 14,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "pid_wind_flc_test::@4c66c086d27eae88c24e",
+				"index" : 14
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"src/modular_pid_system/Release/zn_tuning_test.exe"
+			],
+			"targetId" : "zn_tuning_test::@4c66c086d27eae88c24e",
+			"targetIndex" : 20,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"cxxModuleBmiTarget" : 
+			{
+				"id" : "zn_tuning_test::@4c66c086d27eae88c24e",
+				"index" : 20
+			},
+			"destination" : "bin",
+			"type" : "cxxModuleBmi"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "src/modular_pid_system",
+		"source" : "src/modular_pid_system"
+	}
+}

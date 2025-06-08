@@ -1,0 +1,5 @@
+if(EXISTS "C:/Users/ataka/OneDrive/Masaüstü/docs/multi-agent-formation-control-under-disturbances/build/test_pid_controller[1]_tests.cmake")
+  include("C:/Users/ataka/OneDrive/Masaüstü/docs/multi-agent-formation-control-under-disturbances/build/test_pid_controller[1]_tests.cmake")
+else()
+  add_test(test_pid_controller_NOT_BUILT test_pid_controller_NOT_BUILT)
+endif()

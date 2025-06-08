@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\x64\Release\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\fuzzy_standalone_tester.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\multi_drone_pid_tester.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\src\modular_pid_system\Release\pid_only_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\pid_standalone_tester.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\src\modular_pid_system\Release\pid_wind_flc_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\src\modular_pid_system\Release\pid_wind_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\simple_pid_tuner.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\test_gt2_fls.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\Release\test_pid_controller.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\src\modular_pid_system\Release\zn_tuning_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\ataka\OneDrive\Masaüstü\docs\multi-agent-formation-control-under-disturbances\build\x64\Release\ALL_BUILD</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

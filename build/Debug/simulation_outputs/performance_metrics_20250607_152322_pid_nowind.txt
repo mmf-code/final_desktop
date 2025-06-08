@@ -1,0 +1,122 @@
+PID-Only Controller
+PID Gains: Kp=3.100, Ki=0.400, Kd=2.200
+=======================================================================
+PID-Only Controller Configuration:
+Kp=3.100, Ki=0.400, Kd=2.200
+
+
+--- METRICS FOR PHASE 1 ---
+Drone 0 Metrics (Target X:5.000, Y:7.309):
+  X-axis:
+    Peak Value: 5.669 at t=2.700s
+    Overshoot: 13.388%
+    Settling Time (2%): 14.200000s
+  Y-axis:
+    Peak Value: 8.169 at t=2.750s
+    Overshoot: 13.955%
+    Settling Time (2%): 13.500000s
+Drone 1 Metrics (Target X:3.000, Y:3.845):
+  X-axis:
+    Peak Value: 3.669 at t=2.700s
+    Overshoot: 13.388%
+    Settling Time (2%): 17.750000s
+  Y-axis:
+    Peak Value: 4.651 at t=2.750s
+    Overshoot: 13.792%
+    Settling Time (2%): 17.400000s
+Drone 2 Metrics (Target X:7.000, Y:3.845):
+  X-axis:
+    Peak Value: 7.669 at t=2.700s
+    Overshoot: 13.388%
+    Settling Time (2%): 11.900000s
+  Y-axis:
+    Peak Value: 4.651 at t=2.750s
+    Overshoot: 13.792%
+    Settling Time (2%): 17.400000s
+
+--- METRICS FOR PHASE 2 ---
+Drone 0 Metrics (Target X:-5.000, Y:2.309):
+  X-axis:
+    Peak Value: -6.596 at t=33.000s
+    Overshoot: 15.939%
+    Settling Time (2%): 50.900000s
+  Y-axis:
+    Peak Value: 1.638 at t=32.700s
+    Overshoot: 13.392%
+    Settling Time (2%): 49.550000s
+Drone 1 Metrics (Target X:-7.000, Y:-1.155):
+  X-axis:
+    Peak Value: -8.596 at t=33.000s
+    Overshoot: 15.939%
+    Settling Time (2%): 48.600000s
+  Y-axis:
+    Peak Value: -1.826 at t=32.700s
+    Overshoot: 13.392%
+    Settling Time (2%): 54.300000s
+Drone 2 Metrics (Target X:-3.000, Y:-1.155):
+  X-axis:
+    Peak Value: -4.596 at t=33.000s
+    Overshoot: 15.939%
+    Settling Time (2%): 54.400000s
+  Y-axis:
+    Peak Value: -1.826 at t=32.700s
+    Overshoot: 13.392%
+    Settling Time (2%): 54.300000s
+
+--- METRICS FOR PHASE 3 ---
+Drone 0 Metrics (Target X:0.000, Y:-2.691):
+  X-axis:
+    Peak Value: 0.673 at t=62.750s
+    Overshoot: 13.396%
+    Settling Time (2%): Did not settle
+  Y-axis:
+    Peak Value: -3.359 at t=62.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 78.500000s
+Drone 1 Metrics (Target X:-2.000, Y:-6.155):
+  X-axis:
+    Peak Value: -1.327 at t=62.750s
+    Overshoot: 13.396%
+    Settling Time (2%): 80.600000s
+  Y-axis:
+    Peak Value: -6.823 at t=62.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 72.800000s
+Drone 2 Metrics (Target X:2.000, Y:-6.155):
+  X-axis:
+    Peak Value: 2.673 at t=62.750s
+    Overshoot: 13.396%
+    Settling Time (2%): 80.600000s
+  Y-axis:
+    Peak Value: -6.823 at t=62.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 72.800000s
+
+--- METRICS FOR PHASE 4 ---
+Drone 0 Metrics (Target X:5.000, Y:2.309):
+  X-axis:
+    Peak Value: 5.668 at t=92.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 104.250000s
+  Y-axis:
+    Peak Value: 2.980 at t=92.750s
+    Overshoot: 13.391%
+    Settling Time (2%): 109.600000s
+Drone 1 Metrics (Target X:3.000, Y:-1.155):
+  X-axis:
+    Peak Value: 3.668 at t=92.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 107.750000s
+  Y-axis:
+    Peak Value: -0.484 at t=92.750s
+    Overshoot: 13.391%
+    Settling Time (2%): 114.350000s
+Drone 2 Metrics (Target X:7.000, Y:-1.155):
+  X-axis:
+    Peak Value: 7.668 at t=92.750s
+    Overshoot: 13.386%
+    Settling Time (2%): 101.950000s
+  Y-axis:
+    Peak Value: -0.484 at t=92.750s
+    Overshoot: 13.391%
+    Settling Time (2%): 114.350000s

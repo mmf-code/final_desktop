@@ -1,0 +1,18 @@
+Ziegler-Nichols Tuning Run Information
+Timestamp: 20250607_172506
+Kp_test_value: 2.5
+Simulation Duration: 15s
+CSV Data File: zn_test_Kp2.500_FLS_OFF_WIND_OFF_20250607_172506.csv
+Objective: Observe Drone 0 X-axis for sustained oscillations after first setpoint change.
+
+-- METRICS FOR PHASE 1 --
+ Target Center: (5.000000, 5.000000)
+ Drone 0:
+  X-axis: OS=65.2%, ST(2%)=14.900000s, Peak=8.26 @ 2.00s (Tgt:5.00 Init:0.00)
+  Y-axis: OS=61.9%, ST(2%)=15.000000s, Peak=11.12 @ 2.10s (Tgt:7.31 Init:1.15)
+ Drone 1:
+  X-axis: OS=65.2%, ST(2%)=14.900000s, Peak=6.26 @ 2.00s (Tgt:3.00 Init:-2.00)
+  Y-axis: OS=62.8%, ST(2%)=15.000000s, Peak=7.52 @ 2.10s (Tgt:3.85 Init:-2.00)
+ Drone 2:
+  X-axis: OS=65.2%, ST(2%)=14.900000s, Peak=10.26 @ 2.00s (Tgt:7.00 Init:2.00)
+  Y-axis: OS=62.8%, ST(2%)=15.000000s, Peak=7.52 @ 2.10s (Tgt:3.85 Init:-2.00)

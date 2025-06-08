@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "C:/Users/ataka/OneDrive/Masaüstü/docs/multi-agent-formation-control-under-disturbances",
+    "command": "clang++ -IC:/Users/ataka/OneDrive/Masaüstü/docs/multi-agent-formation-control-under-disturbances/agent_control_pkg/include -IC:/vcpkg/installed/x64-windows/include -IC:/vcpkg/installed/x64-windows/include/yaml-cpp -std=c++17 -DYAML_CPP_STATIC_DEFINE -c agent_control_pkg/src/gt2_fuzzy_logic_system.cpp",
+    "file": "agent_control_pkg/src/gt2_fuzzy_logic_system.cpp"
+  }
+] 
