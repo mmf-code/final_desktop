@@ -1,5 +1,5 @@
 simulation_settings:
-  dt: 0.05
+  dt: 0.1
   total_time: 120.0
   num_drones: 3
   ziegler_nichols_tuning:
@@ -44,7 +44,7 @@ controller_settings:
     
     # Derivative filtering (reduces noise in D-term)
     enable_derivative_filter: true
-    derivative_filter_alpha: 0.1    # Low-pass filter coefficient (0.05-0.2 typical)
+    derivative_filter_alpha: 0.2    # Low-pass filter coefficient (0.05-0.2 typical)
     
     # Feed-forward control (improves tracking performance)
     enable_feedforward: true       # Testing feed-forward improvements

@@ -14,22 +14,27 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ALL_BUILD", "ALL_BUILD.vcxp
 		{6EF302FE-D9E1-3899-9997-7F83A026F62E} = {6EF302FE-D9E1-3899-9997-7F83A026F62E}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Continuous", "_deps\yaml-cpp-build\Continuous.vcxproj", "{1EC7FC27-3E74-37FE-A7E0-5C3D9631640F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Continuous", "Continuous.vcxproj", "{1EC7FC27-3E74-37FE-A7E0-5C3D9631640F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81} = {EC1846A8-45BD-37A6-B362-DFBA4B032D81}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Experimental", "_deps\yaml-cpp-build\Experimental.vcxproj", "{9B4CF593-2529-38A1-837D-8183B9D5574B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Experimental", "Experimental.vcxproj", "{9B4CF593-2529-38A1-837D-8183B9D5574B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81} = {EC1846A8-45BD-37A6-B362-DFBA4B032D81}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Nightly", "_deps\yaml-cpp-build\Nightly.vcxproj", "{1D3ADA4F-F625-3294-952F-661F96D8158A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Nightly", "Nightly.vcxproj", "{1D3ADA4F-F625-3294-952F-661F96D8158A}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81} = {EC1846A8-45BD-37A6-B362-DFBA4B032D81}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NightlyMemoryCheck", "_deps\yaml-cpp-build\NightlyMemoryCheck.vcxproj", "{89274F8C-6F94-360F-B60B-F3EC027FDBFE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NightlyMemoryCheck", "NightlyMemoryCheck.vcxproj", "{89274F8C-6F94-360F-B60B-F3EC027FDBFE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EC1846A8-45BD-37A6-B362-DFBA4B032D81} = {EC1846A8-45BD-37A6-B362-DFBA4B032D81}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RUN_TESTS", "RUN_TESTS.vcxproj", "{2E112242-EFEE-3ADD-8EF2-C5D0D1FD2633}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81} = {EC1846A8-45BD-37A6-B362-DFBA4B032D81}
 	EndProjectSection
@@ -119,6 +124,10 @@ Global
 		{89274F8C-6F94-360F-B60B-F3EC027FDBFE}.Release|x64.ActiveCfg = Release|x64
 		{89274F8C-6F94-360F-B60B-F3EC027FDBFE}.MinSizeRel|x64.ActiveCfg = MinSizeRel|x64
 		{89274F8C-6F94-360F-B60B-F3EC027FDBFE}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
+		{2E112242-EFEE-3ADD-8EF2-C5D0D1FD2633}.Debug|x64.ActiveCfg = Debug|x64
+		{2E112242-EFEE-3ADD-8EF2-C5D0D1FD2633}.Release|x64.ActiveCfg = Release|x64
+		{2E112242-EFEE-3ADD-8EF2-C5D0D1FD2633}.MinSizeRel|x64.ActiveCfg = MinSizeRel|x64
+		{2E112242-EFEE-3ADD-8EF2-C5D0D1FD2633}.RelWithDebInfo|x64.ActiveCfg = RelWithDebInfo|x64
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81}.Debug|x64.ActiveCfg = Debug|x64
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81}.Debug|x64.Build.0 = Debug|x64
 		{EC1846A8-45BD-37A6-B362-DFBA4B032D81}.Release|x64.ActiveCfg = Release|x64

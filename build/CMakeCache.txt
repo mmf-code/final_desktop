@@ -18,7 +18,7 @@
 BUILD_TESTING:BOOL=ON
 
 //Build unit tests
-BUILD_TESTS:STRING=OFF
+BUILD_TESTS:BOOL=OFF
 
 //Path to a program.
 CMAKE_AR:FILEPATH=C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/lib.exe
