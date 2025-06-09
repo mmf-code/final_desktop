@@ -77,6 +77,7 @@ def load_simulation_data(csv_files):
 
     return data
 
+
 def plot_drone_trajectories(data):
     """Plot 2D trajectories for all drones in all scenarios"""
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -89,7 +90,7 @@ def plot_drone_trajectories(data):
         if scenario not in data:
             continue
 
-        ax = axes[idx//2, idx%2]
+        ax = axes[idx // 2, idx % 2]
         df = data[scenario]
 
         # Plot trajectories for each drone
@@ -122,6 +123,7 @@ def plot_drone_trajectories(data):
     plt.savefig('01_drone_trajectories.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def plot_position_tracking(data):
     """Plot position tracking for Drone 0 - X and Y separately"""
 
@@ -136,7 +138,7 @@ def plot_position_tracking(data):
         if scenario not in data:
             continue
 
-        ax = axes[idx//2, idx%2]
+        ax = axes[idx // 2, idx % 2]
         df = data[scenario]
 
         ax.plot(df['Time'], df['TargetX0'], 'r--', linewidth=2, label='Target X')
@@ -176,6 +178,7 @@ def plot_position_tracking(data):
     plt.savefig('03_y_position_tracking.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def plot_error_analysis(data):
     """Plot tracking errors for comparison"""
 
@@ -190,7 +193,7 @@ def plot_error_analysis(data):
         if scenario not in data:
             continue
 
-        ax = axes[idx//2, idx%2]
+        ax = axes[idx // 2, idx % 2]
         df = data[scenario]
 
         ax.plot(df['Time'], df['ErrorX0'], 'r-', linewidth=2, label='X Error')
@@ -218,7 +221,7 @@ def plot_error_analysis(data):
         if scenario not in data:
             continue
 
-        ax = axes[idx//2, idx%2]
+        ax = axes[idx // 2, idx % 2]
         df = data[scenario]
 
         ax.plot(df['Time'], df['ErrorY0'], 'g-', linewidth=2, label='Y Error')
@@ -238,6 +241,7 @@ def plot_error_analysis(data):
     plt.savefig('05_y_error_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def plot_fls_vs_wind_forces(data):
     """Plot FLS correction forces vs Wind forces"""
 
@@ -254,7 +258,7 @@ def plot_fls_vs_wind_forces(data):
         print("No scenarios with FLS or Wind found for force comparison")
         return
 
-    fig, axes = plt.subplots(len(scenarios_to_plot), 2, figsize=(15, 4*len(scenarios_to_plot)))
+    fig, axes = plt.subplots(len(scenarios_to_plot), 2, figsize=(15, 4 * len(scenarios_to_plot)))
     if len(scenarios_to_plot) == 1:
         axes = axes.reshape(1, -1)
 
@@ -293,6 +297,7 @@ def plot_fls_vs_wind_forces(data):
     plt.savefig('06_fls_wind_forces.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def plot_pid_components(data):
     """Plot PID components (P, I, D terms) for analysis"""
 
@@ -306,7 +311,7 @@ def plot_pid_components(data):
         if scenario not in data:
             continue
 
-        ax = axes[idx//2, idx%2]
+        ax = axes[idx // 2, idx % 2]
         df = data[scenario]
 
         # Plot P, I, D terms for X-axis
@@ -324,6 +329,7 @@ def plot_pid_components(data):
     plt.tight_layout()
     plt.savefig('07_pid_components.png', dpi=300, bbox_inches='tight')
     plt.close()
+
 
 def plot_fls_effectiveness(data):
     """Compare FLS effectiveness - Error reduction"""
@@ -384,6 +390,7 @@ def plot_fls_effectiveness(data):
     plt.savefig('07_fls_effectiveness.png', dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def plot_wind_disturbance_effect(data):
     """Compare wind disturbance effects"""
 
@@ -432,6 +439,7 @@ def plot_wind_disturbance_effect(data):
         filename = f"08_wind_effect_{no_wind}_vs_{with_wind}.png"
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         plt.close()
+
 
 def plot_performance_summary(data):
     """Create a performance summary table/chart"""
@@ -499,9 +507,9 @@ def plot_performance_summary(data):
     plt.show()
 
     # Print numerical summary
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("PERFORMANCE SUMMARY")
-    print("="*60)
+    print("=" * 60)
     for name, metric in metrics.items():
         print(f"\n{name}:")
         print(f"  RMS Error X: {metric['RMS Error X']:.4f} m")
@@ -509,6 +517,7 @@ def plot_performance_summary(data):
         print(f"  Max Error X: {metric['Max Error X']:.4f} m")
         print(f"  Max Error Y: {metric['Max Error Y']:.4f} m")
         print(f"  Total RMS:   {metric['Total RMS']:.4f} m")
+
 
 def main():
     """Main execution function"""
@@ -541,12 +550,13 @@ def main():
     plot_wind_disturbance_effect(data)
     plot_performance_summary(data)
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("All plots generated successfully!")
     print("Generated files:")
     for i in range(1, 9):
         filename = f"{i:02d}_*.png"
         print(f"  {filename}")
+
 
 if __name__ == "__main__":
     main()
